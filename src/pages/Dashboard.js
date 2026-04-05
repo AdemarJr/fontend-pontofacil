@@ -1,0 +1,148 @@
+// src/pages/Dashboard.js
+import { useState, useEffect } from 'react';
+import Layout from '../components/dashboard/Layout';
+import { relatorioService, pontoService } from '../services/api';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+function CardMetrica({ label, valor, cor, emoji }) {
+  return (
+    <div className="card" style={{ textAlign:'center', borderTop:`3px solid ${cor}` }}>
+      <div style={{ fontSize:'32px', marginBottom:'8px' }}>{emoji}</div>
+      <p style={{ fontSize:'36px', fontWeight:'700', color: cor }}>{valor}</p>
+      <p style={{ fontSize:'13px', color:'var(--cinza-400)', marginTop:'4px' }}>{label}</p>
+    </div>
+  );
+}
+
+export default function Dashboard() {
+  const [resumo, setResumo] = useState(null);
+  const [registros, setRegistros] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    carregarDados();
+    const interval = setInterval(carregarDados, 60000); // atualiza a cada 1 min
+    return () => clearInterval(interval);
+  }, []);
+
+  async function carregarDados() {
+    try {
+      const hoje = format(new Date(), 'yyyy-MM-dd');
+      const [{ data: res }, { data: reg }] = await Promise.all([
+        relatorioService.resumoDia(),
+        pontoService.listar({ dataInicio: hoje, dataFim: hoje, limite: 20 }),
+      ]);
+      setResumo(res);
+      setRegistros(reg.registros || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  const TIPOS_COR = {
+    ENTRADA: 'var(--verde)',
+    SAIDA_ALMOCO: 'var(--amarelo)',
+    RETORNO_ALMOCO: 'var(--azul)',
+    SAIDA: 'var(--vermelho)',
+  };
+  const TIPOS_LABEL = {
+    ENTRADA: 'Entrada',
+    SAIDA_ALMOCO: 'Saída Almoço',
+    RETORNO_ALMOCO: 'Retorno',
+    SAIDA: 'Saída',
+  };
+
+  if (carregando) {
+    return <Layout><div style={{ display:'flex', justifyContent:'center', padding:'80px' }}><div className="spinner" /></div></Layout>;
+  }
+
+  return (
+    <Layout>
+      {/* Header */}
+      <div style={{ marginBottom:'28px' }}>
+        <h1 style={{ fontSize:'24px', fontWeight:'700' }}>Painel de Controle</h1>
+        <p style={{ color:'var(--cinza-400)', marginTop:'4px' }}>
+          {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+        </p>
+      </div>
+
+      {/* Métricas */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:'16px', marginBottom:'28px' }}>
+        <CardMetrica label="Total de Colaboradores" valor={resumo?.totalColaboradores ?? '-'} cor="var(--azul)" emoji="👥" />
+        <CardMetrica label="Presentes Agora" valor={resumo?.presentes ?? '-'} cor="var(--verde)" emoji="✅" />
+        <CardMetrica label="Ausentes" valor={resumo?.ausentes ?? '-'} cor="var(--vermelho)" emoji="❌" />
+        <CardMetrica label="Registros Hoje" valor={resumo?.registrosHoje ?? '-'} cor="var(--amarelo)" emoji="🕐" />
+      </div>
+
+      {/* Últimos registros */}
+      <div className="card">
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
+          <h2 style={{ fontSize:'16px', fontWeight:'600' }}>Registros de Hoje</h2>
+          <button onClick={carregarDados} style={{ background:'none', border:'none', color:'var(--verde)', cursor:'pointer', fontSize:'13px', fontWeight:'500' }}>
+            ↻ Atualizar
+          </button>
+        </div>
+
+        {registros.length === 0 ? (
+          <div style={{ textAlign:'center', padding:'40px', color:'var(--cinza-400)' }}>
+            <p style={{ fontSize:'32px', marginBottom:'8px' }}>📭</p>
+            <p>Nenhum registro hoje ainda</p>
+          </div>
+        ) : (
+          <div style={{ overflowX:'auto' }}>
+            <table className="tabela">
+              <thead>
+                <tr>
+                  <th>Colaborador</th>
+                  <th>Tipo</th>
+                  <th>Horário</th>
+                  <th>Foto</th>
+                  <th>Localização</th>
+                </tr>
+              </thead>
+              <tbody>
+                {registros.map(r => (
+                  <tr key={r.id}>
+                    <td>
+                      <div style={{ fontWeight:'500' }}>{r.usuario?.nome}</div>
+                      <div style={{ fontSize:'12px', color:'var(--cinza-400)' }}>{r.usuario?.cargo}</div>
+                    </td>
+                    <td>
+                      <span className="badge" style={{ background: TIPOS_COR[r.tipo] + '20', color: TIPOS_COR[r.tipo] }}>
+                        {TIPOS_LABEL[r.tipo]}
+                      </span>
+                    </td>
+                    <td style={{ fontFamily:'monospace', fontSize:'15px', fontWeight:'500' }}>
+                      {format(new Date(r.dataHora), 'HH:mm:ss')}
+                      {r.ajustado && <span className="badge badge-amarelo" style={{ marginLeft:'6px', fontSize:'10px' }}>Ajustado</span>}
+                    </td>
+                    <td>
+                      {r.fotoUrl ? (
+                        <img src={r.fotoUrl} alt="foto" style={{ width:'40px', height:'40px', borderRadius:'8px', objectFit:'cover', cursor:'pointer' }}
+                          onClick={() => window.open(r.fotoUrl, '_blank')} />
+                      ) : (
+                        <span style={{ color:'var(--cinza-400)', fontSize:'12px' }}>—</span>
+                      )}
+                    </td>
+                    <td>
+                      {r.dentroGeofence !== null ? (
+                        <span className={`badge ${r.dentroGeofence ? 'badge-verde' : 'badge-vermelho'}`}>
+                          {r.dentroGeofence ? '✓ Dentro' : '✗ Fora'}
+                        </span>
+                      ) : (
+                        <span style={{ color:'var(--cinza-400)', fontSize:'12px' }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </Layout>
+  );
+}

@@ -1,0 +1,164 @@
+// src/pages/Colaboradores.js
+import { useState, useEffect } from 'react';
+import Layout from '../components/dashboard/Layout';
+import { usuarioService } from '../services/api';
+
+export default function Colaboradores() {
+  const [usuarios, setUsuarios] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [modal, setModal] = useState(null); // null | 'criar' | {usuario}
+  const [form, setForm] = useState({ nome:'', email:'', pin:'', cargo:'', departamento:'', role:'COLABORADOR' });
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState('');
+  const [busca, setBusca] = useState('');
+
+  useEffect(() => { carregar(); }, []);
+
+  async function carregar() {
+    try {
+      const { data } = await usuarioService.listar();
+      setUsuarios(data);
+    } finally { setCarregando(false); }
+  }
+
+  function abrirCriar() {
+    setForm({ nome:'', email:'', pin:'', cargo:'', departamento:'', role:'COLABORADOR' });
+    setErro('');
+    setModal('criar');
+  }
+
+  function abrirEditar(u) {
+    setForm({ nome:u.nome, email:u.email, pin:'', cargo:u.cargo||'', departamento:u.departamento||'', role:u.role, ativo:u.ativo });
+    setErro('');
+    setModal(u);
+  }
+
+  async function salvar() {
+    setErro('');
+    setSalvando(true);
+    try {
+      if (modal === 'criar') {
+        await usuarioService.criar(form);
+      } else {
+        await usuarioService.atualizar(modal.id, form);
+      }
+      setModal(null);
+      carregar();
+    } catch (err) {
+      setErro(err.response?.data?.error || 'Erro ao salvar');
+    } finally { setSalvando(false); }
+  }
+
+  async function toggleAtivo(u) {
+    await usuarioService.atualizar(u.id, { ativo: !u.ativo });
+    carregar();
+  }
+
+  const filtrados = usuarios.filter(u =>
+    u.nome.toLowerCase().includes(busca.toLowerCase()) ||
+    u.email.toLowerCase().includes(busca.toLowerCase()) ||
+    (u.cargo || '').toLowerCase().includes(busca.toLowerCase())
+  );
+
+  return (
+    <Layout>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px' }}>
+        <div>
+          <h1 style={{ fontSize:'24px', fontWeight:'700' }}>Colaboradores</h1>
+          <p style={{ color:'var(--cinza-400)', fontSize:'14px', marginTop:'2px' }}>{usuarios.filter(u=>u.ativo).length} ativos</p>
+        </div>
+        <button className="btn btn-primary" onClick={abrirCriar}>+ Novo Colaborador</button>
+      </div>
+
+      {/* Busca */}
+      <div style={{ marginBottom:'20px' }}>
+        <input className="input" placeholder="🔍 Buscar por nome, e-mail ou cargo..." value={busca} onChange={e => setBusca(e.target.value)} style={{ maxWidth:'400px' }} />
+      </div>
+
+      {/* Tabela */}
+      <div className="card" style={{ padding:0, overflow:'hidden' }}>
+        {carregando ? (
+          <div style={{ display:'flex', justifyContent:'center', padding:'60px' }}><div className="spinner" /></div>
+        ) : (
+          <table className="tabela">
+            <thead><tr>
+              <th>Nome</th><th>E-mail</th><th>Cargo</th><th>Função</th><th>PIN</th><th>Status</th><th>Ações</th>
+            </tr></thead>
+            <tbody>
+              {filtrados.map(u => (
+                <tr key={u.id}>
+                  <td style={{ fontWeight:'500' }}>{u.nome}</td>
+                  <td style={{ color:'var(--cinza-400)', fontSize:'13px' }}>{u.email}</td>
+                  <td>{u.cargo || '—'}</td>
+                  <td>
+                    <span className={`badge ${u.role === 'ADMIN' ? 'badge-azul' : 'badge-cinza'}`}
+                      style={u.role === 'ADMIN' ? { background:'var(--azul-claro)', color:'var(--azul)' } : {}}>
+                      {u.role === 'ADMIN' ? 'Admin' : 'Colaborador'}
+                    </span>
+                  </td>
+                  <td style={{ fontFamily:'monospace', color:'var(--cinza-400)', fontSize:'13px' }}>••••</td>
+                  <td>
+                    <span className={`badge ${u.ativo ? 'badge-verde' : 'badge-vermelho'}`}>
+                      {u.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display:'flex', gap:'8px' }}>
+                      <button onClick={() => abrirEditar(u)} style={{ background:'none', border:'1px solid var(--cinza-200)', borderRadius:'6px', padding:'4px 12px', cursor:'pointer', fontSize:'12px' }}>Editar</button>
+                      <button onClick={() => toggleAtivo(u)} style={{ background:'none', border:'1px solid var(--cinza-200)', borderRadius:'6px', padding:'4px 12px', cursor:'pointer', fontSize:'12px', color: u.ativo ? 'var(--vermelho)' : 'var(--verde)' }}>
+                        {u.ativo ? 'Desativar' : 'Ativar'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Modal */}
+      {modal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:'20px' }}>
+          <div className="card" style={{ width:'100%', maxWidth:'480px', padding:'32px' }}>
+            <h2 style={{ fontSize:'18px', fontWeight:'600', marginBottom:'24px' }}>
+              {modal === 'criar' ? 'Novo Colaborador' : `Editar: ${modal.nome}`}
+            </h2>
+
+            <div style={{ display:'grid', gap:'16px' }}>
+              {[
+                { key:'nome', label:'Nome completo', type:'text', required:true },
+                { key:'email', label:'E-mail', type:'email', required:true },
+                { key:'pin', label: modal === 'criar' ? 'PIN (4-6 dígitos)' : 'Novo PIN (deixe vazio para não alterar)', type:'password', required: modal === 'criar' },
+                { key:'cargo', label:'Cargo', type:'text' },
+                { key:'departamento', label:'Departamento', type:'text' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label style={{ display:'block', fontSize:'13px', fontWeight:'500', color:'var(--cinza-700)', marginBottom:'6px' }}>{f.label}</label>
+                  <input className="input" type={f.type} value={form[f.key] || ''} onChange={e => setForm(p => ({...p, [f.key]: e.target.value}))} required={f.required} />
+                </div>
+              ))}
+
+              <div>
+                <label style={{ display:'block', fontSize:'13px', fontWeight:'500', color:'var(--cinza-700)', marginBottom:'6px' }}>Função</label>
+                <select className="input" value={form.role} onChange={e => setForm(p => ({...p, role: e.target.value}))}>
+                  <option value="COLABORADOR">Colaborador</option>
+                  <option value="ADMIN">Administrador</option>
+                </select>
+              </div>
+            </div>
+
+            {erro && <div style={{ background:'var(--vermelho-claro)', color:'var(--vermelho)', padding:'10px 14px', borderRadius:'8px', fontSize:'13px', marginTop:'16px' }}>{erro}</div>}
+
+            <div style={{ display:'flex', gap:'12px', marginTop:'24px' }}>
+              <button className="btn btn-secondary btn-full" onClick={() => setModal(null)}>Cancelar</button>
+              <button className="btn btn-primary btn-full" onClick={salvar} disabled={salvando}>
+                {salvando ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Layout>
+  );
+}

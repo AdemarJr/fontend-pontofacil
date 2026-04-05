@@ -1,0 +1,72 @@
+// src/pages/Login.js
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { authService } from '../services/api';
+
+export default function Login() {
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [erro, setErro] = useState('');
+  const [carregando, setCarregando] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setErro('');
+    setCarregando(true);
+    try {
+      const { data } = await authService.login(email, senha);
+      login(data.usuario, data.accessToken, data.refreshToken);
+      if (data.usuario.role === 'SUPER_ADMIN') navigate('/super-admin');
+      else if (data.usuario.role === 'ADMIN') navigate('/dashboard');
+      else navigate('/totem');
+    } catch (err) {
+      setErro(err.response?.data?.error || 'Erro ao fazer login');
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg, #1D9E75 0%, #085041 100%)', padding:'20px' }}>
+      <div className="card" style={{ width:'100%', maxWidth:'400px', padding:'40px' }}>
+        {/* Logo */}
+        <div style={{ textAlign:'center', marginBottom:'32px' }}>
+          <div style={{ width:'56px', height:'56px', background:'var(--verde)', borderRadius:'16px', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px', fontSize:'28px' }}>
+            🕐
+          </div>
+          <h1 style={{ fontSize:'24px', fontWeight:'700', color:'var(--cinza-900)' }}>PontoFácil</h1>
+          <p style={{ color:'var(--cinza-400)', fontSize:'14px', marginTop:'4px' }}>Sistema de Controle de Ponto Digital</p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom:'16px' }}>
+            <label style={{ display:'block', fontSize:'13px', fontWeight:'500', color:'var(--cinza-700)', marginBottom:'6px' }}>E-mail</label>
+            <input className="input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required autoFocus />
+          </div>
+          <div style={{ marginBottom:'24px' }}>
+            <label style={{ display:'block', fontSize:'13px', fontWeight:'500', color:'var(--cinza-700)', marginBottom:'6px' }}>Senha</label>
+            <input className="input" type="password" value={senha} onChange={e => setSenha(e.target.value)} placeholder="••••••••" required />
+          </div>
+
+          {erro && (
+            <div style={{ background:'var(--vermelho-claro)', color:'var(--vermelho)', padding:'12px', borderRadius:'var(--radius-sm)', fontSize:'14px', marginBottom:'16px' }}>
+              {erro}
+            </div>
+          )}
+
+          <button className="btn btn-primary btn-full btn-lg" type="submit" disabled={carregando}>
+            {carregando ? <span className="spinner" style={{ width:'20px', height:'20px', borderWidth:'2px' }} /> : 'Entrar'}
+          </button>
+        </form>
+
+        <p style={{ textAlign:'center', marginTop:'24px', fontSize:'13px', color:'var(--cinza-400)' }}>
+          Acesso ao totem?{' '}
+          <a href="/totem" style={{ color:'var(--verde)', textDecoration:'none', fontWeight:'500' }}>Clique aqui</a>
+        </p>
+      </div>
+    </div>
+  );
+}
