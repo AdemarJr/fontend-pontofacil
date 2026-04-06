@@ -1,7 +1,8 @@
 // src/services/api.js
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api' || 'https://crm-app-pontofacil-backend.9nb5f0.easypanel.host/api';
+// Base deve terminar em /api (rotas do Express: /api/auth, /api/ponto, …)
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
 const api = axios.create({
   baseURL: API_URL,
