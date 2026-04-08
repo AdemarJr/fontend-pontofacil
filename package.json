@@ -19,7 +19,11 @@
     "workbox-routing": "^7.1.0",
     "workbox-strategies": "^7.1.0"
   },
+  "devDependencies": {
+    "pngjs": "^7.0.0"
+  },
   "scripts": {
+    "icons": "node scripts/generate-pwa-icons.js",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
