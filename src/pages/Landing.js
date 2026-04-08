@@ -15,6 +15,18 @@ const FEATURES = [
     text: 'Tablet na entrada com teclado numérico, registro rápido por PIN e foto opcional — ideal para recepção.',
   },
   {
+    icon: '🕐',
+    title: 'Defina a jornada de trabalho do seu colaborador',
+    text: 'Configure horários e escalas com flexibilidade, de acordo com a necessidade da sua empresa.',
+    highlight: true,
+  },
+  {
+    icon: '📍',
+    title: 'Controle de ponto com cerca virtual',
+    text: 'Defina as áreas permitidas para registro de ponto e evite fraudes.',
+    highlight: true,
+  },
+  {
     icon: '📊',
     title: 'Dashboard do gestor',
     text: 'Visão do dia, colaboradores, configurações da empresa e gestão de equipe em um só lugar.',
@@ -23,11 +35,6 @@ const FEATURES = [
     icon: '📋',
     title: 'Espelho de ponto e relatórios',
     text: 'Espelho mensal por colaborador, exportação CSV, ajustes manuais com motivo e auditoria.',
-  },
-  {
-    icon: '📍',
-    title: 'Geofencing (GPS)',
-    text: 'Restrinja registros a uma área configurável em metros — compliance e controle de presença no local.',
   },
   {
     icon: '📷',
@@ -42,10 +49,10 @@ const FEATURES = [
 ];
 
 const SECURITY = [
-  { icon: '🔐', title: 'JWT + refresh', desc: 'Sessões com renovação automática e tokens de curta duração no totem.' },
-  { icon: '🔒', title: 'Senhas e PIN', desc: 'Hash bcrypt (salt 12); PIN numérico para o modo totem.' },
-  { icon: '🛡️', title: 'Rate limiting', desc: 'Proteção contra abuso: limites globais e reforço no registro de ponto.' },
-  { icon: '📸', title: 'Privacidade', desc: 'Fotos com acesso controlado; IP com hash para auditoria sem expor dados brutos.' },
+  { icon: '🔐', title: 'Acesso seguro', desc: 'Login com renovação automática de sessão e proteção extra no totem, para quem só bate ponto.' },
+  { icon: '🔒', title: 'Senhas e PIN protegidos', desc: 'Credenciais armazenadas com padrão de mercado; PIN numérico rápido para o colaborador no totem.' },
+  { icon: '🛡️', title: 'Proteção contra abuso', desc: 'Limites de uso que ajudam a evitar registros em massa ou tentativas suspeitas.' },
+  { icon: '📸', title: 'Privacidade das fotos', desc: 'Evidências com acesso restrito; dados de rede tratados de forma a apoiar auditoria sem expor informação sensível.' },
 ];
 
 export default function Landing() {
@@ -76,16 +83,18 @@ export default function Landing() {
 
       <section className="landing-hero">
         <div className="landing-hero-inner">
+          <p className="landing-hero-kicker">Para empresas que querem ponto simples, seguro e sob controle</p>
           <h1>Controle de ponto digital que sua empresa merece</h1>
           <p className="lead">
-            PontoFácil é um sistema SaaS completo: totem com PIN, painel para gestores, relatórios,
-            geofencing, multi-empresa e segurança de nível corporativo — tudo em uma PWA que roda no
-            navegador ou instalável no tablet e no celular.
+            Com o PontoFácil você organiza jornadas e escalas, reduz risco de registro fora do local com cerca
+            virtual e acompanha tudo em um painel — totem com PIN, relatórios e multi-empresa em uma solução que
+            roda no navegador ou instalada no tablet e no celular (PWA).
           </p>
           <div className="landing-pill-row" aria-hidden>
-            <span className="landing-pill">PWA instalável</span>
-            <span className="landing-pill">Multi-tenant</span>
-            <span className="landing-pill">API REST moderna</span>
+            <span className="landing-pill">Jornadas e escalas</span>
+            <span className="landing-pill">Cerca virtual</span>
+            <span className="landing-pill">Totem com PIN</span>
+            <span className="landing-pill">Multi-empresa</span>
           </div>
           <div className="landing-hero-ctas">
             <a href={WA_HREF} target="_blank" rel="noopener noreferrer" className="landing-btn-wa">
@@ -104,14 +113,17 @@ export default function Landing() {
 
       <section id="funcionalidades" className="landing-section">
         <div className="landing-section-inner">
-          <h2>Tudo que o sistema oferece</h2>
+          <h2>O que você ganha com o PontoFácil</h2>
           <p className="sub">
-            Do registro no totem ao espelho de ponto e ajustes auditáveis — funcionalidades pensadas para RH,
-            gestores e colaboradores no dia a dia.
+            Funcionalidades pensadas para o gestor e para o RH: menos retrabalho, mais clareza no espelho de
+            ponto e regras que acompanham a realidade da sua operação.
           </p>
           <div className="landing-grid-3">
             {FEATURES.map((f) => (
-              <article key={f.title} className="landing-card">
+              <article
+                key={f.title}
+                className={`landing-card${f.highlight ? ' landing-card--highlight' : ''}`}
+              >
                 <div className="icon" aria-hidden>{f.icon}</div>
                 <h3>{f.title}</h3>
                 <p>{f.text}</p>
@@ -125,32 +137,32 @@ export default function Landing() {
         <div className="landing-section-inner">
           <h2>Como funciona na prática</h2>
           <p className="sub">
-            Fluxo típico: configure a empresa no painel, disponibilize o totem na entrada e acompanhe os
-            registros em tempo real.
+            Em três passos você coloca a empresa no ar: configurar regras, cadastrar pessoas e acompanhar o
+            ponto com relatórios prontos para o dia a dia.
           </p>
           <div className="landing-grid-3">
             <article className="landing-card">
               <div className="icon">1️⃣</div>
-              <h3>Cadastro e configuração</h3>
+              <h3>Configure sua operação</h3>
               <p>
-                Plano por porte (usuários), dados da empresa, geofencing opcional e política de foto obrigatória
-                ou não — tudo centralizado nas configurações.
+                Escolha o plano pelo tamanho da equipe, preencha os dados da empresa e defina se quer cerca
+                virtual, foto obrigatória e tolerâncias — tudo em um painel simples.
               </p>
             </article>
             <article className="landing-card">
               <div className="icon">2️⃣</div>
-              <h3>Totem e colaboradores</h3>
+              <h3>Cadastre e organize a jornada</h3>
               <p>
-                Colaboradores batem ponto com PIN no totem; gestores cadastram equipe, cargos e escalas de
-                trabalho conforme o processo da empresa.
+                Inclua colaboradores, cargos e departamentos; defina horários e escalas com a flexibilidade que
+                o seu negócio pede. No totem, o time registra ponto com PIN, rápido e sem fila.
               </p>
             </article>
             <article className="landing-card">
               <div className="icon">3️⃣</div>
-              <h3>Relatórios e conformidade</h3>
+              <h3>Acompanhe com relatórios</h3>
               <p>
-                Espelho de ponto mensal, resumo do dia, exportação CSV e ajustes com motivo — base para
-                processos internos e fiscalização.
+                Veja espelho de ponto, resumo do dia e exportações para análise ou contador. Ajustes manuais
+                ficam registrados com motivo, para auditoria interna transparente.
               </p>
             </article>
           </div>
@@ -159,10 +171,10 @@ export default function Landing() {
 
       <section id="planos" className="landing-section">
         <div className="landing-section-inner">
-          <h2>Planos por porte</h2>
+          <h2>Planos por porte da equipe</h2>
           <p className="sub">
-            Escolha o plano conforme o tamanho da sua equipe. Fale com um consultor para condições comerciais
-            e implantação.
+            Contrate pelo número de colaboradores que vão usar o sistema. Valores e implantação combinamos com
+            você — fale com um consultor e receba uma proposta alinhada à sua empresa.
           </p>
           <div className="landing-plans">
             <div className="landing-plan">
@@ -171,8 +183,8 @@ export default function Landing() {
               <ul>
                 <li>Totem + PIN</li>
                 <li>Dashboard e colaboradores</li>
-                <li>Relatórios e espelho de ponto</li>
-                <li>Geofencing e foto configuráveis</li>
+                <li>Jornadas, escalas e espelho de ponto</li>
+                <li>Cerca virtual e foto configuráveis</li>
               </ul>
               <a href={WA_HREF} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-full">
                 Solicitar proposta
@@ -210,9 +222,10 @@ export default function Landing() {
 
       <section id="seguranca" className="landing-section alt">
         <div className="landing-section-inner">
-          <h2>Segurança e tecnologia</h2>
+          <h2>Segurança que você pode explicar ao seu time</h2>
           <p className="sub">
-            Arquitetura moderna (API REST, JWT, PostgreSQL) com boas práticas para proteger dados e operações.
+            Por trás do PontoFácil há uma arquitetura em nuvem com boas práticas de mercado — seus dados
+            separados por empresa e operações protegidas contra uso indevido.
           </p>
           <div className="landing-security">
             {SECURITY.map((s) => (
@@ -226,28 +239,27 @@ export default function Landing() {
             ))}
           </div>
           <p style={{ textAlign: 'center', marginTop: '28px', fontSize: '14px', color: 'var(--cinza-400)', maxWidth: '640px', marginLeft: 'auto', marginRight: 'auto' }}>
-            Roadmap: exportação PDF do espelho, notificações, integrações com folha e eSocial, entre outras
-            evoluções — consulte nossos especialistas sobre o que já está disponível e o que está em
-            desenvolvimento.
+            Em evolução: mais integrações com folha, notificações e outras melhorias. Pergunte ao consultor o
+            que já está disponível hoje e o que vem na sequência para o seu caso.
           </p>
         </div>
       </section>
 
       <section className="landing-section">
         <div className="landing-section-inner" style={{ textAlign: 'center' }}>
-          <h2>App no celular e tablet</h2>
+          <h2>Uso no celular, tablet ou totem — sem complicação</h2>
           <p className="sub" style={{ marginBottom: '0' }}>
-            Progressive Web App (PWA): instale na tela inicial, use em tela cheia no totem e aproveite
-            experiência otimizada para toque — sem depender de loja de aplicativos para começar.
+            O PontoFácil é uma PWA: seu time pode &quot;instalar&quot; no aparelho, abrir em tela cheia no totem e
+            usar gestos naturais, sem depender de publicação em loja de aplicativos para começar a operar.
           </p>
         </div>
       </section>
 
       <section className="landing-cta">
-        <h2>Pronto para modernizar o ponto na sua empresa?</h2>
+        <h2>Quer ver o PontoFácil no seu cenário?</h2>
         <p>
-          Nossa equipe tira suas dúvidas sobre planos, implantação e como o PontoFácil se encaixa no seu
-          processo de RH.
+          Conte para a gente o tamanho da equipe e como vocês registram ponto hoje. Respondemos com plano,
+          próximos passos e tudo o que precisa para decidir com segurança.
         </p>
         <a href={WA_HREF} target="_blank" rel="noopener noreferrer" className="landing-btn-wa" style={{ fontSize: '17px' }}>
           💬 Fale com um de nossos consultores

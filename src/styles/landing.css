@@ -82,6 +82,17 @@
   margin: 0 auto;
 }
 
+.landing-hero-kicker {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.88;
+  margin: 0 0 14px;
+  max-width: 36ch;
+  line-height: 1.4;
+}
+
 .landing-hero h1 {
   font-size: clamp(1.85rem, 4.5vw, 2.75rem);
   font-weight: 800;
@@ -93,9 +104,9 @@
 .landing-hero p.lead {
   margin-top: 20px;
   font-size: 1.1rem;
-  line-height: 1.6;
+  line-height: 1.65;
   opacity: 0.92;
-  max-width: 520px;
+  max-width: 38rem;
 }
 
 .landing-hero-ctas {
@@ -195,6 +206,18 @@
   box-shadow: var(--shadow);
   border: 1px solid var(--cinza-200);
   height: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.landing-card--highlight {
+  border-color: rgba(29, 158, 117, 0.45);
+  box-shadow: 0 4px 24px rgba(29, 158, 117, 0.12);
+  background: linear-gradient(180deg, rgba(29, 158, 117, 0.06) 0%, var(--branco) 48%);
+}
+
+.landing-card--highlight:hover {
+  border-color: var(--verde);
+  box-shadow: 0 8px 28px rgba(29, 158, 117, 0.16);
 }
 
 .landing-card .icon {
@@ -208,6 +231,7 @@
   font-weight: 700;
   margin-bottom: 8px;
   color: var(--cinza-900);
+  line-height: 1.35;
 }
 
 .landing-card p {
