@@ -13,8 +13,7 @@ export default function Colaboradores() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const [busca, setBusca] = useState('');
-  const [pinsVisiveis, setPinsVisiveis] = useState(() => new Set());
-  const [pinsGerados, setPinsGerados] = useState(() => ({})); // { [usuarioId]: pinGerado }
+  const [pinVisivelNoModal, setPinVisivelNoModal] = useState(false);
 
   useEffect(() => { carregar(); }, []);
 
@@ -30,32 +29,23 @@ export default function Colaboradores() {
     return String(Math.floor(1000 + Math.random() * 9000));
   }
 
-  async function gerarEAplicarNovoPin(usuarioId) {
+  function gerarPinParaFormulario() {
     const novoPin = gerarPinAleatorio();
-    await usuarioService.atualizar(usuarioId, { pin: novoPin });
-    setPinsGerados((p) => ({ ...p, [usuarioId]: novoPin }));
-    setPinsVisiveis((prev) => new Set(prev).add(usuarioId));
-    carregar();
-  }
-
-  function togglePinVisivel(usuarioId) {
-    setPinsVisiveis((prev) => {
-      const next = new Set(prev);
-      if (next.has(usuarioId)) next.delete(usuarioId);
-      else next.add(usuarioId);
-      return next;
-    });
+    setForm((p) => ({ ...p, pin: novoPin }));
+    setPinVisivelNoModal(true);
   }
 
   function abrirCriar() {
     setForm({ nome:'', email:'', pin:'', cargo:'', departamento:'', role:'COLABORADOR' });
     setErro('');
+    setPinVisivelNoModal(false);
     setModal('criar');
   }
 
   function abrirEditar(u) {
     setForm({ nome:u.nome, email:u.email, pin:'', cargo:u.cargo||'', departamento:u.departamento||'', role:u.role, ativo:u.ativo });
     setErro('');
+    setPinVisivelNoModal(false);
     setModal(u);
   }
 
@@ -124,33 +114,7 @@ export default function Colaboradores() {
                       {u.role === 'ADMIN' ? 'Admin' : 'Colaborador'}
                     </span>
                   </td>
-                  <td style={{ fontFamily:'monospace', color:'var(--cinza-400)', fontSize:'13px' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                      <span>
-                        {isAdmin && pinsVisiveis.has(u.id) ? (pinsGerados[u.id] || '—') : '••••'}
-                      </span>
-                      {isAdmin && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => togglePinVisivel(u.id)}
-                            title={pinsVisiveis.has(u.id) ? 'Ocultar PIN' : 'Mostrar PIN (somente se você acabou de gerar/alterar)'}
-                            style={{ background:'none', border:'1px solid var(--cinza-200)', borderRadius:'6px', padding:'2px 8px', cursor:'pointer', fontSize:'12px' }}
-                          >
-                            {pinsVisiveis.has(u.id) ? '🙈' : '👁️'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => gerarEAplicarNovoPin(u.id)}
-                            title="Gerar e aplicar um novo PIN (o PIN atual não pode ser recuperado do hash)"
-                            style={{ background:'none', border:'1px solid var(--cinza-200)', borderRadius:'6px', padding:'2px 8px', cursor:'pointer', fontSize:'12px' }}
-                          >
-                            Novo PIN
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
+                  <td style={{ fontFamily:'monospace', color:'var(--cinza-400)', fontSize:'13px' }}>••••</td>
                   <td>
                     <span className={`badge ${u.ativo ? 'badge-verde' : 'badge-vermelho'}`}>
                       {u.ativo ? 'Ativo' : 'Inativo'}
@@ -183,13 +147,46 @@ export default function Colaboradores() {
               {[
                 { key:'nome', label:'Nome completo', type:'text', required:true },
                 { key:'email', label:'E-mail', type:'email', required:true },
-                { key:'pin', label: modal === 'criar' ? 'PIN (4-6 dígitos)' : 'Novo PIN (deixe vazio para não alterar)', type:'password', required: modal === 'criar' },
+                { key:'pin', label: modal === 'criar' ? 'PIN (4-6 dígitos)' : 'Novo PIN (deixe vazio para não alterar)', type: pinVisivelNoModal ? 'text' : 'password', required: modal === 'criar' },
                 { key:'cargo', label:'Cargo', type:'text' },
                 { key:'departamento', label:'Departamento', type:'text' },
               ].map(f => (
                 <div key={f.key}>
                   <label style={{ display:'block', fontSize:'13px', fontWeight:'500', color:'var(--cinza-700)', marginBottom:'6px' }}>{f.label}</label>
-                  <input className="input" type={f.type} value={form[f.key] || ''} onChange={e => setForm(p => ({...p, [f.key]: e.target.value}))} required={f.required} />
+                  {f.key === 'pin' ? (
+                    <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
+                      <input
+                        className="input"
+                        type={f.type}
+                        value={form[f.key] || ''}
+                        onChange={e => setForm(p => ({...p, [f.key]: e.target.value}))}
+                        required={f.required}
+                        style={{ flex: 1 }}
+                      />
+                      {isAdmin && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setPinVisivelNoModal(v => !v)}
+                            title={pinVisivelNoModal ? 'Ocultar PIN' : 'Mostrar PIN'}
+                            style={{ background:'none', border:'1px solid var(--cinza-200)', borderRadius:'8px', padding:'8px 10px', cursor:'pointer', fontSize:'12px' }}
+                          >
+                            {pinVisivelNoModal ? '🙈' : '👁️'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={gerarPinParaFormulario}
+                            title="Gerar um PIN aleatório e preencher no formulário"
+                            style={{ background:'none', border:'1px solid var(--cinza-200)', borderRadius:'8px', padding:'8px 10px', cursor:'pointer', fontSize:'12px' }}
+                          >
+                            Novo PIN
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <input className="input" type={f.type} value={form[f.key] || ''} onChange={e => setForm(p => ({...p, [f.key]: e.target.value}))} required={f.required} />
+                  )}
                 </div>
               ))}
 
