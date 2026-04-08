@@ -92,6 +92,7 @@ export const pontoService = {
 export const usuarioService = {
   listar: () => api.get('/usuarios'),
   buscar: (id) => api.get(`/usuarios/${id}`),
+  obterPin: (id) => api.get(`/usuarios/${id}/pin`),
   criar: (dados) => api.post('/usuarios', dados),
   atualizar: (id, dados) => api.put(`/usuarios/${id}`, dados),
   remover: (id) => api.delete(`/usuarios/${id}`),

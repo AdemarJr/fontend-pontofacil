@@ -15,6 +15,7 @@ export default function Colaboradores() {
   const [busca, setBusca] = useState('');
   const [pinsVisiveis, setPinsVisiveis] = useState(() => new Set());
   const [pinsGerados, setPinsGerados] = useState(() => ({})); // { [usuarioId]: pinGerado }
+  const [pinsCarregando, setPinsCarregando] = useState(() => new Set());
 
   useEffect(() => { carregar(); }, []);
 
@@ -43,13 +44,32 @@ export default function Colaboradores() {
     carregar();
   }
 
-  function togglePinVisivel(usuarioId) {
+  async function togglePinVisivel(usuarioId) {
     setPinsVisiveis((prev) => {
       const next = new Set(prev);
       if (next.has(usuarioId)) next.delete(usuarioId);
       else next.add(usuarioId);
       return next;
     });
+
+    // Se já temos o PIN em cache (gerado/resetado ou buscado), não precisa buscar.
+    if (pinsGerados[usuarioId]) return;
+    if (!isAdmin) return;
+
+    setPinsCarregando((prev) => new Set(prev).add(usuarioId));
+    try {
+      const { data } = await usuarioService.obterPin(usuarioId);
+      setPinsGerados((p) => ({ ...p, [usuarioId]: data.pin }));
+    } catch (e) {
+      // Se ainda não existe pinEncrypted no banco, pedimos para resetar 1x.
+      alert(e.response?.data?.error || 'Não foi possível obter o PIN.');
+    } finally {
+      setPinsCarregando((prev) => {
+        const next = new Set(prev);
+        next.delete(usuarioId);
+        return next;
+      });
+    }
   }
 
   function abrirCriar() {
@@ -142,7 +162,7 @@ export default function Colaboradores() {
                             title={pinsVisiveis.has(u.id) ? 'Ocultar PIN (somente mostra o último PIN gerado)' : 'Mostrar PIN (somente o último PIN gerado)'}
                             style={{ background:'none', border:'1px solid var(--cinza-200)', borderRadius:'6px', padding:'2px 8px', cursor:'pointer', fontSize:'12px' }}
                           >
-                            {pinsVisiveis.has(u.id) ? '🙈' : '👁️'}
+                            {pinsCarregando.has(u.id) ? '…' : (pinsVisiveis.has(u.id) ? '🙈' : '👁️')}
                           </button>
                           <button
                             type="button"
