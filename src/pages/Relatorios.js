@@ -6,6 +6,16 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const TIPOS_LABEL = { ENTRADA:'Entrada', SAIDA_ALMOCO:'Saída Almoço', RETORNO_ALMOCO:'Retorno', SAIDA:'Saída' };
+
+function fmtMinutos(m) {
+  if (m == null || Number.isNaN(Number(m))) return '—';
+  const v = Math.round(Number(m));
+  const sign = v < 0 ? '-' : '';
+  const abs = Math.abs(v);
+  const h = Math.floor(abs / 60);
+  const min = abs % 60;
+  return `${sign}${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
 const TIPOS_COR = { ENTRADA:'var(--verde)', SAIDA_ALMOCO:'var(--amarelo)', RETORNO_ALMOCO:'var(--azul)', SAIDA:'var(--vermelho)' };
 
 export default function Relatorios() {
@@ -20,12 +30,24 @@ export default function Relatorios() {
   const [ajusteForm, setAjusteForm] = useState({ dataHoraNova:'', motivo:'' });
   const [salvandoAjuste, setSalvandoAjuste] = useState(false);
   const [exportando, setExportando] = useState(false);
+  const [bancoResumo, setBancoResumo] = useState(null);
 
   useEffect(() => {
     usuarioService.listar().then(({ data }) => setUsuarios(data));
   }, []);
 
   useEffect(() => { buscar(); }, [mes, ano, usuarioFiltro]);
+
+  useEffect(() => {
+    relatorioService
+      .bancoHorasResumo({
+        mes,
+        ano,
+        ...(usuarioFiltro && { usuarioId: usuarioFiltro }),
+      })
+      .then(({ data }) => setBancoResumo(data))
+      .catch(() => setBancoResumo(null));
+  }, [mes, ano, usuarioFiltro]);
 
   async function buscar() {
     setCarregando(true);
@@ -134,6 +156,43 @@ export default function Relatorios() {
         </div>
       </div>
 
+      {bancoResumo?.resumo?.length > 0 && (
+        <div className="card" style={{ marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>Banco de horas e hora extra (mês)</h2>
+          <p style={{ fontSize: '12px', color: 'var(--cinza-400)', marginBottom: '12px' }}>
+            {bancoResumo.obs}
+          </p>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="tabela" style={{ fontSize: '13px' }}>
+              <thead>
+                <tr>
+                  <th>Colaborador</th>
+                  <th>Trabalhado</th>
+                  <th>Esperado (escala)</th>
+                  <th>Saldo</th>
+                  <th>Hora extra (max 0)</th>
+                  <th>Déficit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bancoResumo.resumo.map((row, idx) => (
+                  <tr key={`${row.usuario?.nome}-${idx}`}>
+                    <td>{row.usuario?.nome}</td>
+                    <td style={{ fontFamily: 'monospace' }}>{row.totalHoras}</td>
+                    <td style={{ fontFamily: 'monospace' }}>{fmtMinutos(row.totalEsperadoMin)}</td>
+                    <td style={{ fontFamily: 'monospace', color: row.saldoMesMin >= 0 ? 'var(--verde-escuro)' : 'var(--vermelho)' }}>
+                      {row.saldoMes}
+                    </td>
+                    <td style={{ fontFamily: 'monospace' }}>{row.horaExtraMes}</td>
+                    <td style={{ fontFamily: 'monospace', color: 'var(--cinza-400)' }}>{fmtMinutos(row.deficitMesMin)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Resultados */}
       {carregando ? (
         <div style={{ display:'flex', justifyContent:'center', padding:'60px' }}><div className="spinner" /></div>
@@ -155,14 +214,18 @@ export default function Relatorios() {
                 <p style={{ fontSize:'13px', color:'var(--cinza-400)' }}>{r.usuario.cargo}</p>
               </div>
             </div>
-            <div style={{ display:'flex', gap:'16px' }}>
+            <div style={{ display:'flex', gap:'16px', flexWrap:'wrap' }}>
               <div style={{ textAlign:'center' }}>
                 <p style={{ fontSize:'20px', fontWeight:'700', color:'var(--azul)' }}>{r.totalHoras}</p>
                 <p style={{ fontSize:'11px', color:'var(--cinza-400)' }}>Total trabalhado</p>
               </div>
               <div style={{ textAlign:'center' }}>
-                <p style={{ fontSize:'20px', fontWeight:'700', color: r.totalExtras && r.totalExtras !== '00:00' ? 'var(--amarelo)' : 'var(--cinza-400)' }}>{r.totalExtras}</p>
-                <p style={{ fontSize:'11px', color:'var(--cinza-400)' }}>Horas extras</p>
+                <p style={{ fontSize:'13px', fontWeight:'600', color:'var(--cinza-700)' }}>{r.saldoMes ?? '—'}</p>
+                <p style={{ fontSize:'11px', color:'var(--cinza-400)' }}>Saldo mês (vs. esperado)</p>
+              </div>
+              <div style={{ textAlign:'center' }}>
+                <p style={{ fontSize:'20px', fontWeight:'700', color: r.horaExtraMes && r.horaExtraMes !== '00:00' ? 'var(--amarelo)' : 'var(--cinza-400)' }}>{r.horaExtraMes ?? r.totalExtras}</p>
+                <p style={{ fontSize:'11px', color:'var(--cinza-400)' }}>Hora extra (acima do esperado)</p>
               </div>
             </div>
           </div>

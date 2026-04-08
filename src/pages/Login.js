@@ -21,7 +21,7 @@ export default function Login() {
       login(data.usuario, data.accessToken, data.refreshToken);
       if (data.usuario.role === 'SUPER_ADMIN') navigate('/super-admin');
       else if (data.usuario.role === 'ADMIN') navigate('/dashboard');
-      else navigate('/totem');
+      else navigate('/meu-ponto');
     } catch (err) {
       setErro(err.response?.data?.error || 'Erro ao fazer login');
     } finally {
@@ -62,9 +62,11 @@ export default function Login() {
           </button>
         </form>
 
-        <p style={{ textAlign:'center', marginTop:'24px', fontSize:'13px', color:'var(--cinza-400)' }}>
-          Acesso ao totem?{' '}
-          <a href="/totem" style={{ color:'var(--verde)', textDecoration:'none', fontWeight:'500' }}>Clique aqui</a>
+        <p style={{ textAlign:'center', marginTop:'24px', fontSize:'13px', color:'var(--cinza-400)', lineHeight: 1.6 }}>
+          Colaborador: após entrar, use <strong>Meu ponto</strong> no celular (mesmas regras da empresa).
+          <br />
+          Totem compartilhado (PIN)?{' '}
+          <a href="/totem" style={{ color:'var(--verde)', textDecoration:'none', fontWeight:'500' }}>Abrir totem</a>
         </p>
       </div>
     </div>

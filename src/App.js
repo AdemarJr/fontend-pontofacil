@@ -10,14 +10,23 @@ import Dashboard from './pages/Dashboard';
 import Colaboradores from './pages/Colaboradores';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
+import Escalas from './pages/Escalas';
 import SuperAdmin from './pages/SuperAdmin';
 import Landing from './pages/Landing';
+import MeuPonto from './pages/MeuPonto';
 
-function RotaProtegida({ children, apenasAdmin = false }) {
+function RotaProtegida({ children, apenasAdmin = false, apenasColaborador = false }) {
   const { usuario, carregando, isAdmin } = useAuth();
   if (carregando) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh' }}><div className="spinner" /></div>;
   if (!usuario) return <Navigate to="/login" replace />;
-  if (apenasAdmin && !isAdmin) return <Navigate to="/totem" replace />;
+  if (apenasColaborador && usuario.role !== 'COLABORADOR') {
+    if (usuario.role === 'SUPER_ADMIN') return <Navigate to="/super-admin" replace />;
+    if (isAdmin) return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/login" replace />;
+  }
+  if (apenasAdmin && !isAdmin) {
+    return <Navigate to={usuario.role === 'COLABORADOR' ? '/meu-ponto' : '/login'} replace />;
+  }
   return children;
 }
 
@@ -33,7 +42,7 @@ function RedirecionarInicio() {
   if (!usuario) return <Landing />;
   if (usuario.role === 'SUPER_ADMIN') return <Navigate to="/super-admin" replace />;
   if (usuario.role === 'ADMIN') return <Navigate to="/dashboard" replace />;
-  return <Navigate to="/totem" replace />;
+  return <Navigate to="/meu-ponto" replace />;
 }
 
 export default function App() {
@@ -45,7 +54,12 @@ export default function App() {
           <Route path="/landing" element={<Landing />} />
           <Route path="/login" element={<Login />} />
 
-          {/* Totem (colaborador) */}
+          {/* Colaborador: registro pelo app (e-mail) ou totem (PIN) */}
+          <Route path="/meu-ponto" element={
+            <RotaProtegida apenasColaborador>
+              <MeuPonto />
+            </RotaProtegida>
+          } />
           <Route path="/totem" element={
             <RotaProtegida>
               <Totem />
@@ -66,6 +80,11 @@ export default function App() {
           <Route path="/relatorios" element={
             <RotaProtegida apenasAdmin>
               <Relatorios />
+            </RotaProtegida>
+          } />
+          <Route path="/escalas" element={
+            <RotaProtegida apenasAdmin>
+              <Escalas />
             </RotaProtegida>
           } />
           <Route path="/configuracoes" element={

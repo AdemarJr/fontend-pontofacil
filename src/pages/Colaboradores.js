@@ -1,7 +1,7 @@
 // src/pages/Colaboradores.js
 import { useState, useEffect } from 'react';
 import Layout from '../components/dashboard/Layout';
-import { usuarioService } from '../services/api';
+import { usuarioService, localRegistroService } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Colaboradores() {
@@ -16,8 +16,12 @@ export default function Colaboradores() {
   const [pinsVisiveis, setPinsVisiveis] = useState(() => new Set());
   const [pinsGerados, setPinsGerados] = useState(() => ({})); // { [usuarioId]: pinGerado }
   const [pinsCarregando, setPinsCarregando] = useState(() => new Set());
+  const [locais, setLocais] = useState([]);
 
   useEffect(() => { carregar(); }, []);
+  useEffect(() => {
+    localRegistroService.listar().then(({ data }) => setLocais(data)).catch(() => setLocais([]));
+  }, []);
 
   async function carregar() {
     try {
@@ -73,13 +77,13 @@ export default function Colaboradores() {
   }
 
   function abrirCriar() {
-    setForm({ nome:'', email:'', pin:'', cargo:'', departamento:'', role:'COLABORADOR' });
+    setForm({ nome:'', email:'', pin:'', cargo:'', departamento:'', role:'COLABORADOR', localRegistroId:'' });
     setErro('');
     setModal('criar');
   }
 
   function abrirEditar(u) {
-    setForm({ nome:u.nome, email:u.email, pin:'', cargo:u.cargo||'', departamento:u.departamento||'', role:u.role, ativo:u.ativo });
+    setForm({ nome:u.nome, email:u.email, pin:'', cargo:u.cargo||'', departamento:u.departamento||'', role:u.role, ativo:u.ativo, localRegistroId: u.localRegistroId || '' });
     setErro('');
     setModal(u);
   }
@@ -88,10 +92,15 @@ export default function Colaboradores() {
     setErro('');
     setSalvando(true);
     try {
+      const payload = { ...form };
+      if (payload.localRegistroId === '') {
+        if (modal === 'criar') delete payload.localRegistroId;
+        else payload.localRegistroId = null;
+      }
       if (modal === 'criar') {
-        await usuarioService.criar(form);
+        await usuarioService.criar(payload);
       } else {
-        await usuarioService.atualizar(modal.id, form);
+        await usuarioService.atualizar(modal.id, payload);
       }
       setModal(null);
       carregar();
@@ -248,6 +257,29 @@ export default function Colaboradores() {
                   <option value="ADMIN">Administrador</option>
                 </select>
               </div>
+
+              {form.role === 'COLABORADOR' && locais.length > 0 && (
+                <div>
+                  <label style={{ display:'block', fontSize:'13px', fontWeight:'500', color:'var(--cinza-700)', marginBottom:'6px' }}>
+                    Local permitido (cerca virtual)
+                  </label>
+                  <select
+                    className="input"
+                    value={form.localRegistroId || ''}
+                    onChange={(e) => setForm((p) => ({ ...p, localRegistroId: e.target.value }))}
+                  >
+                    <option value="">Qualquer local cadastrado</option>
+                    {locais.filter((l) => l.ativo).map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.nome} ({l.raioMetros}m)
+                      </option>
+                    ))}
+                  </select>
+                  <p style={{ fontSize:'12px', color:'var(--cinza-400)', marginTop:'6px' }}>
+                    Se a cerca virtual estiver ativa, o colaborador só poderá bater ponto dentro deste local.
+                  </p>
+                </div>
+              )}
             </div>
 
             {erro && <div style={{ background:'var(--vermelho-claro)', color:'var(--vermelho)', padding:'10px 14px', borderRadius:'8px', fontSize:'13px', marginTop:'16px' }}>{erro}</div>}

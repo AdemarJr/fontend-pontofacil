@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 const MENU = [
   { path: '/dashboard', label: 'Início', icon: '📊' },
   { path: '/colaboradores', label: 'Colaboradores', icon: '👥' },
+  { path: '/escalas', label: 'Jornadas', icon: '🕐' },
   { path: '/relatorios', label: 'Relatórios', icon: '📋' },
   { path: '/configuracoes', label: 'Configurações', icon: '⚙️' },
 ];

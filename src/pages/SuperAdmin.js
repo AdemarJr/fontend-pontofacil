@@ -109,6 +109,31 @@ export default function SuperAdmin() {
     } finally { setSalvando(false); }
   }
 
+  async function limparPontosEmpresa(t) {
+    if (!t?.id) return;
+    const aviso =
+      `EXCLUSÃO PERMANENTE dos registros de ponto da empresa:\n\n"${t.nomeFantasia}"\n\n` +
+      `Digite o NOME FANTASIA exatamente como cadastrado para confirmar.`;
+    const digitado = window.prompt(aviso);
+    if (digitado == null) return;
+    if (digitado.trim() !== t.nomeFantasia) {
+      alert('O nome não confere. Nada foi alterado.');
+      return;
+    }
+    if (!window.confirm('Última confirmação: todos os registros e ajustes desta empresa serão apagados. Continuar?')) {
+      return;
+    }
+    try {
+      const { data } = await superAdminService.limparRegistrosTenant(t.id, digitado.trim());
+      alert(
+        `Concluído. Registros removidos: ${data.removidosRegistros}. Ajustes removidos: ${data.removidosAjustes}.`
+      );
+      carregar();
+    } catch (e) {
+      alert(e.response?.data?.error || 'Erro ao limpar registros');
+    }
+  }
+
   async function resetSenhaAdmin(t, admin) {
     if (!t?.id || !admin?.id) return;
     if (!window.confirm(`Resetar a senha do admin ${admin.email}?`)) return;
@@ -225,6 +250,16 @@ export default function SuperAdmin() {
                           )}
                           {t.status !== 'CANCELADO' && (
                             <button onClick={() => alterarStatus(t.id, 'CANCELADO')} style={{ background:'none', border:'1px solid var(--vermelho)', color:'var(--vermelho)', borderRadius:'6px', padding:'3px 10px', cursor:'pointer', fontSize:'12px' }}>Cancelar</button>
+                          )}
+                          {t._count?.registros > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => limparPontosEmpresa(t)}
+                              style={{ background:'none', border:'1px solid var(--vermelho)', color:'#b91c1c', borderRadius:'6px', padding:'3px 10px', cursor:'pointer', fontSize:'12px' }}
+                              title="Apaga todos os registros de ponto e ajustes desta empresa (irreversível)"
+                            >
+                              Zerar pontos
+                            </button>
                           )}
                         </div>
                       </td>

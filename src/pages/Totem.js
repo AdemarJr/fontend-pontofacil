@@ -66,8 +66,9 @@ export default function Totem() {
       const { data } = await authService.loginPin(pin, tenantId, getDeviceId());
       setUsuario(data.usuario);
       setTotemToken(data.totemToken);
+      localStorage.setItem('accessToken', data.totemToken);
 
-      // Busca próximo ponto esperado
+      // Busca próximo ponto esperado (requer JWT no header)
       const { data: ultimo } = await pontoService.ultimoPonto(data.usuario.id);
       setProximoTipo(ultimo.proximoTipo || 'ENTRADA');
 

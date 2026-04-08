@@ -98,9 +98,26 @@ export const usuarioService = {
   remover: (id) => api.delete(`/usuarios/${id}`),
 };
 
+// ---- ESCALAS (jornada) ----
+export const escalaService = {
+  listar: (usuarioId) => api.get('/escalas', { params: { usuarioId } }),
+  criar: (dados) => api.post('/escalas', dados),
+  atualizar: (id, dados) => api.put(`/escalas/${id}`, dados),
+  remover: (id) => api.delete(`/escalas/${id}`),
+};
+
+// ---- LOCAIS DE REGISTRO (cerca virtual múltipla) ----
+export const localRegistroService = {
+  listar: () => api.get('/locais-registro'),
+  criar: (dados) => api.post('/locais-registro', dados),
+  atualizar: (id, dados) => api.put(`/locais-registro/${id}`, dados),
+  remover: (id) => api.delete(`/locais-registro/${id}`),
+};
+
 // ---- RELATÓRIOS ----
 export const relatorioService = {
   espelhoPonto: (params) => api.get('/relatorios/espelho', { params }),
+  bancoHorasResumo: (params) => api.get('/relatorios/banco-horas', { params }),
   resumoDia: () => api.get('/relatorios/resumo-dia'),
   ajustarPonto: (dados) => api.post('/relatorios/ajuste', dados),
   /**
@@ -164,6 +181,8 @@ export const superAdminService = {
     api.post(`/super-admin/tenants/${tenantId}/admin/${adminId}/reset-senha`),
   atualizarTenant: (id, dados) => api.put(`/super-admin/tenants/${id}`, dados),
   atualizarStatus: (id, status) => api.put(`/super-admin/tenants/${id}/status`, { status }),
+  limparRegistrosTenant: (tenantId, confirmarNomeFantasia) =>
+    api.post(`/super-admin/tenants/${tenantId}/limpar-registros`, { confirmarNomeFantasia }),
   stats: () => api.get('/super-admin/stats'),
 };
 

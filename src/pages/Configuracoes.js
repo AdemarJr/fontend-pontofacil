@@ -1,13 +1,16 @@
 // src/pages/Configuracoes.js
 import { useState, useEffect } from 'react';
 import Layout from '../components/dashboard/Layout';
-import { tenantService } from '../services/api';
+import { tenantService, localRegistroService } from '../services/api';
 
 export default function Configuracoes() {
   const [config, setConfig] = useState(null);
   const [form, setForm] = useState({});
   const [salvando, setSalvando] = useState(false);
   const [sucesso, setSucesso] = useState(false);
+  const [locais, setLocais] = useState([]);
+  const [novoLocal, setNovoLocal] = useState({ nome: '', latitude: '', longitude: '', raioMetros: 200 });
+  const [salvandoLocal, setSalvandoLocal] = useState(false);
 
   useEffect(() => {
     tenantService.meu().then(({ data }) => {
@@ -23,6 +26,14 @@ export default function Configuracoes() {
     });
   }, []);
 
+  function carregarLocais() {
+    localRegistroService.listar().then(({ data }) => setLocais(data)).catch(() => setLocais([]));
+  }
+
+  useEffect(() => {
+    if (config) carregarLocais();
+  }, [config]);
+
   async function salvar() {
     setSalvando(true);
     try {
@@ -30,6 +41,31 @@ export default function Configuracoes() {
       setSucesso(true);
       setTimeout(() => setSucesso(false), 3000);
     } finally { setSalvando(false); }
+  }
+
+  async function adicionarLocal(e) {
+    e.preventDefault();
+    if (!novoLocal.nome || novoLocal.latitude === '' || novoLocal.longitude === '') return;
+    setSalvandoLocal(true);
+    try {
+      await localRegistroService.criar({
+        nome: novoLocal.nome,
+        latitude: Number(novoLocal.latitude),
+        longitude: Number(novoLocal.longitude),
+        raioMetros: Number(novoLocal.raioMetros) || 200,
+        ativo: true,
+      });
+      setNovoLocal({ nome: '', latitude: '', longitude: '', raioMetros: 200 });
+      carregarLocais();
+    } finally {
+      setSalvandoLocal(false);
+    }
+  }
+
+  async function removerLocal(id) {
+    if (!window.confirm('Remover este local? Colaboradores vinculados ficarão sem restrição de local.')) return;
+    await localRegistroService.remover(id);
+    carregarLocais();
   }
 
   if (!config) return <Layout><div style={{ display:'flex', justifyContent:'center', padding:'80px' }}><div className="spinner" /></div></Layout>;
@@ -62,6 +98,10 @@ export default function Configuracoes() {
             <input type="checkbox" checked={form.geofenceAtivo} onChange={e => setForm(p => ({...p, geofenceAtivo: e.target.checked}))} style={{ width:'18px', height:'18px', accentColor:'var(--verde)' }} />
             <span style={{ fontSize:'14px', fontWeight:'500' }}>Ativar restrição por localização</span>
           </label>
+          <p style={{ fontSize:'13px', color:'var(--cinza-400)', marginBottom:'12px', lineHeight:1.5 }}>
+            Com a cerca ativa, o totem só registra ponto dentro da área. Se você cadastrar <strong>locais nomeados</strong> abaixo,
+            eles passam a valer no lugar de latitude/longitude únicas da empresa. Em Colaboradores, você pode restringir cada pessoa a um local.
+          </p>
 
           {form.geofenceAtivo && (
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
@@ -78,6 +118,87 @@ export default function Configuracoes() {
                 <input type="range" min="50" max="1000" step="10" value={form.geofenceRaio} onChange={e => setForm(p => ({...p, geofenceRaio: Number(e.target.value)}))} style={{ width:'100%', accentColor:'var(--verde)' }} />
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Locais nomeados (múltiplas cercas) */}
+        <div className="card">
+          <h2 style={{ fontSize:'15px', fontWeight:'600', marginBottom:'8px' }}>📌 Locais permitidos para o totem</h2>
+          <p style={{ fontSize:'13px', color:'var(--cinza-400)', marginBottom:'16px' }}>
+            Cadastre filiais, obras ou entradas com nome, GPS e raio. Com cerca virtual ativa, basta existir um local cadastrado
+            (ou use o mapa único acima se não houver locais).
+          </p>
+          <form onSubmit={adicionarLocal} style={{ display:'grid', gap:'10px', marginBottom:'16px' }}>
+            <input
+              className="input"
+              placeholder="Nome do local (ex.: Matriz, Loja Centro)"
+              value={novoLocal.nome}
+              onChange={(e) => setNovoLocal((p) => ({ ...p, nome: e.target.value }))}
+            />
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'8px' }}>
+              <input
+                className="input"
+                type="number"
+                step="0.000001"
+                placeholder="Latitude"
+                value={novoLocal.latitude}
+                onChange={(e) => setNovoLocal((p) => ({ ...p, latitude: e.target.value }))}
+              />
+              <input
+                className="input"
+                type="number"
+                step="0.000001"
+                placeholder="Longitude"
+                value={novoLocal.longitude}
+                onChange={(e) => setNovoLocal((p) => ({ ...p, longitude: e.target.value }))}
+              />
+              <input
+                className="input"
+                type="number"
+                min="50"
+                max="2000"
+                placeholder="Raio (m)"
+                value={novoLocal.raioMetros}
+                onChange={(e) => setNovoLocal((p) => ({ ...p, raioMetros: e.target.value }))}
+              />
+            </div>
+            <button type="submit" className="btn btn-secondary" disabled={salvandoLocal} style={{ maxWidth:'200px' }}>
+              {salvandoLocal ? 'Salvando…' : 'Adicionar local'}
+            </button>
+          </form>
+          {locais.length === 0 ? (
+            <p style={{ fontSize:'13px', color:'var(--cinza-400)' }}>Nenhum local nomeado. Usando o ponto único do geofencing acima (se preenchido).</p>
+          ) : (
+            <ul style={{ listStyle:'none', padding:0, margin:0 }}>
+              {locais.map((l) => (
+                <li
+                  key={l.id}
+                  style={{
+                    display:'flex',
+                    alignItems:'center',
+                    justifyContent:'space-between',
+                    padding:'10px 0',
+                    borderBottom:'1px solid var(--cinza-100)',
+                    fontSize:'14px',
+                  }}
+                >
+                  <span>
+                    <strong>{l.nome}</strong>
+                    <span style={{ color:'var(--cinza-400)', marginLeft:'8px', fontSize:'12px' }}>
+                      {l.latitude?.toFixed(5)}, {l.longitude?.toFixed(5)} · {l.raioMetros}m
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize:'12px', padding:'4px 10px', color:'var(--vermelho)' }}
+                    onClick={() => removerLocal(l.id)}
+                  >
+                    Remover
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
