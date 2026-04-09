@@ -5,7 +5,6 @@ import { authService } from '../services/api';
 
 export default function RecuperarSenha() {
   const [email, setEmail] = useState('');
-  const [tenantId, setTenantId] = useState('');
   const [erro, setErro] = useState('');
   const [ok, setOk] = useState('');
   const [carregando, setCarregando] = useState(false);
@@ -16,14 +15,18 @@ export default function RecuperarSenha() {
     setOk('');
     setCarregando(true);
     try {
-      const body = { email: email.trim() };
-      const tid = tenantId.trim();
-      if (tid) body.tenantId = tid;
-      const { data } = await authService.forgotPassword(body);
+      const { data } = await authService.forgotPassword({ email: email.trim() });
       setOk(data.mensagem || 'Se o e-mail existir, você receberá instruções.');
     } catch (err) {
       const d = err.response?.data;
-      setErro(d?.error || 'Não foi possível enviar. Tente novamente.');
+      if (d?.code === 'TENANT_ID_OBRIGATORIO') {
+        setErro(
+          d.error ||
+            'Este e-mail está em mais de uma empresa. Entre em contato com o administrador da sua empresa para informar o ID da empresa (Totem) ou use o e-mail exclusivo da sua conta.'
+        );
+      } else {
+        setErro(d?.error || 'Não foi possível enviar. Tente novamente.');
+      }
     } finally {
       setCarregando(false);
     }
@@ -44,13 +47,12 @@ export default function RecuperarSenha() {
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <h1 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--cinza-900)' }}>Recuperar senha</h1>
           <p style={{ color: 'var(--cinza-400)', fontSize: '14px', marginTop: '8px', lineHeight: 1.5 }}>
-            Enviaremos um link para o e-mail cadastrado. Se o mesmo e-mail existir em mais de uma empresa, informe o{' '}
-            <strong>ID do Totem</strong> (Configurações no painel).
+            Enviaremos um link para o e-mail cadastrado na empresa.
           </p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '16px' }}>
+          <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--cinza-700)', marginBottom: '6px' }}>
               E-mail
             </label>
@@ -62,19 +64,6 @@ export default function RecuperarSenha() {
               placeholder="seu@email.com"
               required
               autoComplete="email"
-            />
-          </div>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--cinza-700)', marginBottom: '6px' }}>
-              ID da empresa (opcional)
-            </label>
-            <input
-              className="input"
-              type="text"
-              value={tenantId}
-              onChange={(e) => setTenantId(e.target.value)}
-              placeholder="UUID — só se o sistema pedir"
-              autoComplete="off"
             />
           </div>
 

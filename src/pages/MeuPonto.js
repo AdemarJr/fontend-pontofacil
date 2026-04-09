@@ -12,6 +12,28 @@ const TIPOS_LABEL = {
   SAIDA: { label: 'Saída', cor: '#E24B4A', emoji: '🔴' },
 };
 
+/** Texto do lembrete por horário (entrada, intervalos, saída) */
+function textoLembreteHorario(tipo) {
+  const map = {
+    ENTRADA: 'Entrada — registre sua chegada.',
+    SAIDA_ALMOCO: 'Intervalo: saída para almoço — registre ao sair.',
+    RETORNO_ALMOCO: 'Intervalo: retorno do almoço — registre ao voltar.',
+    SAIDA: 'Saída — registre o fim do expediente.',
+  };
+  return map[tipo] || `Registre: ${TIPOS_LABEL[tipo]?.label || tipo}`;
+}
+
+/** Quando o servidor indica outro “próximo” (ex.: ajuste, outro dispositivo) */
+function textoAlteracaoAtividade(novoTipo) {
+  const map = {
+    ENTRADA: 'Seu próximo passo agora é registrar a Entrada. Abra o Meu Ponto.',
+    SAIDA_ALMOCO: 'Seu próximo passo agora é a saída para o intervalo (almoço).',
+    RETORNO_ALMOCO: 'Seu próximo passo agora é o retorno do intervalo.',
+    SAIDA: 'Seu próximo passo agora é a Saída do expediente.',
+  };
+  return map[novoTipo] || `Próximo registro esperado: ${TIPOS_LABEL[novoTipo]?.label || novoTipo}. Abra o Meu Ponto.`;
+}
+
 export default function MeuPonto() {
   const { usuario, logout, carregando: authCarregando } = useAuth();
   const navigate = useNavigate();
@@ -22,6 +44,8 @@ export default function MeuPonto() {
   const [lembretesAtivos, setLembretesAtivos] = useState(() => localStorage.getItem('meuPontoLembretesAtivos') === '1');
   const [permissaoNotificacao, setPermissaoNotificacao] = useState(() => (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'));
   const webcamRef = useRef(null);
+  const proximoTipoRef = useRef(null);
+  const lastSelfRegistroAt = useRef(0);
 
   function humanizarErroRegistro(err) {
     const status = err?.response?.status;
@@ -92,7 +116,7 @@ export default function MeuPonto() {
     localStorage.setItem(k, String(Date.now()));
   }
 
-  async function notificar(title, body) {
+  const notificar = useCallback(async (title, body, tag = 'meu-ponto-lembrete') => {
     if (typeof Notification === 'undefined') return false;
     if (Notification.permission !== 'granted') return false;
     const base = (process.env.PUBLIC_URL || '').replace(/\/$/, '');
@@ -101,7 +125,7 @@ export default function MeuPonto() {
       body,
       icon: iconUrl,
       badge: iconUrl,
-      tag: 'meu-ponto-lembrete',
+      tag,
       renotify: true,
     };
     try {
@@ -120,7 +144,7 @@ export default function MeuPonto() {
       console.warn('[meu-ponto] Notification API:', e?.message);
       return false;
     }
-  }
+  }, []);
 
   async function ativarLembretes() {
     if (typeof Notification === 'undefined') {
@@ -143,40 +167,47 @@ export default function MeuPonto() {
     );
   }
 
-  async function testarNotificacao() {
-    if (typeof Notification === 'undefined') {
-      alert('Este navegador não suporta notificações.');
-      return;
-    }
-    let perm = Notification.permission;
-    if (perm === 'default') {
-      perm = await Notification.requestPermission();
-      setPermissaoNotificacao(perm);
-    }
-    if (perm !== 'granted') {
-      alert('Permissão negada. Nas configurações do navegador, permita notificações para este site.');
-      return;
-    }
-    const ok = await notificar('PontoFácil — teste', 'Se você viu isto, as notificações estão funcionando.');
-    if (!ok) alert('Não foi possível exibir a notificação. Tente de novo após recarregar a página.');
-  }
-
   function desativarLembretes() {
     localStorage.setItem('meuPontoLembretesAtivos', '0');
     setLembretesAtivos(false);
   }
 
-  const carregarProximo = useCallback(async () => {
-    if (!usuario?.id) return;
-    try {
-      const { data } = await pontoService.ultimoPonto(usuario.id);
-      setProximoTipo(data.proximoTipo || 'ENTRADA');
-      setEtapa('confirmar');
-    } catch {
-      setEtapa('confirmar');
-      setProximoTipo('ENTRADA');
-    }
-  }, [usuario?.id]);
+  const carregarProximo = useCallback(
+    async (opts = {}) => {
+      if (!usuario?.id) return;
+      const silent = opts.silent === true;
+      try {
+        const { data } = await pontoService.ultimoPonto(usuario.id);
+        const novo = data.proximoTipo || 'ENTRADA';
+        const anterior = proximoTipoRef.current;
+        proximoTipoRef.current = novo;
+        setProximoTipo(novo);
+        setEtapa('confirmar');
+
+        const mudou = anterior !== null && anterior !== novo;
+        const poucoDepoisDoProprioRegistro = Date.now() - lastSelfRegistroAt.current < 12000;
+        if (
+          !silent &&
+          mudou &&
+          !poucoDepoisDoProprioRegistro &&
+          typeof Notification !== 'undefined' &&
+          Notification.permission === 'granted'
+        ) {
+          notificar(
+            'PontoFácil — atualização',
+            textoAlteracaoAtividade(novo),
+            'meu-ponto-alteracao'
+          );
+        }
+      } catch {
+        setEtapa('confirmar');
+        const novo = 'ENTRADA';
+        proximoTipoRef.current = novo;
+        setProximoTipo(novo);
+      }
+    },
+    [usuario?.id, notificar]
+  );
 
   useEffect(() => {
     document.body.classList.add('totem-mode');
@@ -188,13 +219,23 @@ export default function MeuPonto() {
   }, [usuario?.id, carregarProximo]);
 
   useEffect(() => {
-    const sync = () => {
+    if (typeof Notification !== 'undefined') setPermissaoNotificacao(Notification.permission);
+    const onVisibility = () => {
       if (typeof Notification !== 'undefined') setPermissaoNotificacao(Notification.permission);
+      if (document.visibilityState === 'visible' && usuario?.id) {
+        carregarProximo({ silent: false });
+      }
     };
-    sync();
-    document.addEventListener('visibilitychange', sync);
-    return () => document.removeEventListener('visibilitychange', sync);
-  }, []);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [usuario?.id, carregarProximo]);
+
+  /** Sincroniza com o servidor (ajuste pelo RH, outro aparelho, etc.) */
+  useEffect(() => {
+    if (!usuario?.id) return;
+    const id = setInterval(() => carregarProximo({ silent: false }), 4 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [usuario?.id, carregarProximo]);
 
   // Lembretes: checa a cada 15s (evita perder a janela de 1 min) + Service Worker para PWA
   useEffect(() => {
@@ -219,10 +260,9 @@ export default function MeuPonto() {
       const fim = new Date(inicio.getTime() + tolerancia * 60 * 1000);
 
       if (agora >= inicio && agora <= fim) {
-        const tipoInfo = TIPOS_LABEL[proximoTipo];
         const titulo = 'Hora de bater o ponto';
-        const corpo = `${tipoInfo?.label || proximoTipo} — abra o Meu Ponto e registre.`;
-        notificar(titulo, corpo).then((ok) => {
+        const corpo = textoLembreteHorario(proximoTipo);
+        notificar(titulo, corpo, `meu-ponto-lembrete-${proximoTipo}`).then((ok) => {
           if (ok) marcarNotificado(proximoTipo);
         });
       }
@@ -231,7 +271,7 @@ export default function MeuPonto() {
     tick();
     const timer = setInterval(tick, 15 * 1000);
     return () => clearInterval(timer);
-  }, [usuario?.id, lembretesAtivos, proximoTipo]);
+  }, [usuario?.id, lembretesAtivos, proximoTipo, notificar]);
 
   const enviarRegistro = useCallback(
     async (fotoBase64) => {
@@ -257,13 +297,15 @@ export default function MeuPonto() {
           fotoBase64,
         });
 
+        lastSelfRegistroAt.current = Date.now();
+
         setMensagem(
           `Ponto registrado!\n${TIPOS_LABEL[proximoTipo]?.label} — ${new Date().toLocaleTimeString('pt-BR')}`
         );
         setEtapa('sucesso');
         setTimeout(() => {
           setEtapa('confirmar');
-          carregarProximo();
+          carregarProximo({ silent: true });
         }, 2800);
       } catch (err) {
         setMensagem(humanizarErroRegistro(err));
@@ -363,13 +405,6 @@ export default function MeuPonto() {
       <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 8 }}>
         <button
           type="button"
-          onClick={() => navigate('/totem')}
-          style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: '#94a3b8', padding: '8px 12px', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}
-        >
-          Modo totem (PIN)
-        </button>
-        <button
-          type="button"
           onClick={() => {
             logout();
             navigate('/login');
@@ -396,7 +431,7 @@ export default function MeuPonto() {
       </div>
 
       <p style={{ color: '#64748b', fontSize: 12, textAlign: 'center', maxWidth: 340, lineHeight: 1.5 }}>
-        Mesmas regras do totem: localização se a cerca estiver ativa, foto se for obrigatória. Use um link salvo ou o PWA no celular.
+        Você já está logado com seu e-mail. Localização e foto seguem as regras da empresa (cerca virtual e foto obrigatória, se ativas). Salve este link ou use o PWA no celular.
       </p>
 
       <div style={{ width: '100%', maxWidth: 420 }}>
@@ -405,7 +440,7 @@ export default function MeuPonto() {
             <div>
               <p style={{ color: 'white', fontSize: 14, fontWeight: 700, margin: 0 }}>🔔 Lembretes de ponto</p>
               <p style={{ color: '#94a3b8', fontSize: 12, marginTop: 6, marginBottom: 0, lineHeight: 1.4 }}>
-                Avisa no horário do próximo batida (Entrada, Almoço…). Use &quot;Testar&quot; para validar permissão. No iOS o suporte varia — mantenha o app aberto se não tocar.
+                Lembra no horário do próximo passo: <strong>Entrada</strong>, <strong>intervalo</strong> (saída e retorno do almoço) e <strong>Saída</strong>. Se o próximo ponto mudar (ex.: ajuste no sistema), você também recebe um aviso — com permissão de notificação. No iOS o suporte varia.
               </p>
               {permissaoNotificacao !== 'granted' && (
                 <p style={{ color: '#fbbf24', fontSize: 12, marginTop: 8, marginBottom: 0, lineHeight: 1.4 }}>
@@ -415,9 +450,6 @@ export default function MeuPonto() {
             </div>
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <button type="button" className="btn btn-secondary" onClick={testarNotificacao} style={{ whiteSpace: 'nowrap' }}>
-                Testar
-              </button>
               {lembretesAtivos ? (
                 <button type="button" className="btn btn-secondary" onClick={desativarLembretes} style={{ whiteSpace: 'nowrap' }}>
                   Desativar
