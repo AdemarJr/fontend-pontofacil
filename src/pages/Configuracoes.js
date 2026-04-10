@@ -1,6 +1,7 @@
 // src/pages/Configuracoes.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Layout from '../components/dashboard/Layout';
+import ListPagination, { slicePaged } from '../components/ListPagination';
 import { tenantService, localRegistroService } from '../services/api';
 
 export default function Configuracoes() {
@@ -11,6 +12,8 @@ export default function Configuracoes() {
   const [locais, setLocais] = useState([]);
   const [novoLocal, setNovoLocal] = useState({ nome: '', latitude: '', longitude: '', raioMetros: 200 });
   const [salvandoLocal, setSalvandoLocal] = useState(false);
+  const [locaisPage, setLocaisPage] = useState(1);
+  const [locaisPageSize, setLocaisPageSize] = useState(10);
 
   useEffect(() => {
     tenantService.meu().then(({ data }) => {
@@ -71,6 +74,11 @@ export default function Configuracoes() {
   if (!config) return <Layout><div style={{ display:'flex', justifyContent:'center', padding:'80px' }}><div className="spinner" /></div></Layout>;
 
   const tenantId = config.id;
+
+  const { pageItems: locaisPagina, total: totalLocais, safePage: locaisSafePage } = useMemo(
+    () => slicePaged(locais, locaisPage, locaisPageSize),
+    [locais, locaisPage, locaisPageSize]
+  );
 
   return (
     <Layout>
@@ -170,7 +178,7 @@ export default function Configuracoes() {
             <p style={{ fontSize:'13px', color:'var(--cinza-400)' }}>Nenhum local nomeado. Usando o ponto único do geofencing acima (se preenchido).</p>
           ) : (
             <ul style={{ listStyle:'none', padding:0, margin:0 }}>
-              {locais.map((l) => (
+              {locaisPagina.map((l) => (
                 <li
                   key={l.id}
                   style={{
@@ -199,6 +207,19 @@ export default function Configuracoes() {
                 </li>
               ))}
             </ul>
+          )}
+          {locais.length > 0 && (
+            <ListPagination
+              style={{ marginTop: '16px' }}
+              page={locaisSafePage}
+              pageSize={locaisPageSize}
+              total={totalLocais}
+              onPageChange={setLocaisPage}
+              onPageSizeChange={(n) => {
+                setLocaisPageSize(n);
+                setLocaisPage(1);
+              }}
+            />
           )}
         </div>
 

@@ -1,6 +1,7 @@
 // src/pages/Dashboard.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/dashboard/Layout';
+import ListPagination from '../components/ListPagination';
 import { relatorioService, pontoService } from '../services/api';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -19,28 +20,35 @@ export default function Dashboard() {
   const [resumo, setResumo] = useState(null);
   const [registros, setRegistros] = useState([]);
   const [carregando, setCarregando] = useState(true);
+  const [pagina, setPagina] = useState(1);
+  const [limite, setLimite] = useState(10);
+  const [totalRegistros, setTotalRegistros] = useState(0);
 
-  useEffect(() => {
-    carregarDados();
-    const interval = setInterval(carregarDados, 60000); // atualiza a cada 1 min
-    return () => clearInterval(interval);
-  }, []);
-
-  async function carregarDados() {
+  const carregarDados = useCallback(async () => {
     try {
       const hoje = format(new Date(), 'yyyy-MM-dd');
       const [{ data: res }, { data: reg }] = await Promise.all([
         relatorioService.resumoDia(),
-        pontoService.listar({ dataInicio: hoje, dataFim: hoje, limite: 20 }),
+        pontoService.listar({ dataInicio: hoje, dataFim: hoje, limite, pagina }),
       ]);
       setResumo(res);
       setRegistros(reg.registros || []);
+      const total = reg.total ?? 0;
+      const paginas = Math.max(1, reg.paginas ?? 1);
+      setTotalRegistros(total);
+      if (pagina > paginas) setPagina(paginas);
     } catch (err) {
       console.error(err);
     } finally {
       setCarregando(false);
     }
-  }
+  }, [limite, pagina]);
+
+  useEffect(() => {
+    carregarDados();
+    const interval = setInterval(carregarDados, 60000); // atualiza a cada 1 min
+    return () => clearInterval(interval);
+  }, [carregarDados]);
 
   const TIPOS_COR = {
     ENTRADA: 'var(--verde)',
@@ -140,6 +148,20 @@ export default function Dashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {registros.length > 0 && totalRegistros > 0 && (
+          <div style={{ padding: '12px 16px 16px', borderTop: '1px solid var(--cinza-100)' }}>
+            <ListPagination
+              page={pagina}
+              pageSize={limite}
+              total={totalRegistros}
+              onPageChange={setPagina}
+              onPageSizeChange={(n) => {
+                setLimite(n);
+                setPagina(1);
+              }}
+            />
           </div>
         )}
       </div>

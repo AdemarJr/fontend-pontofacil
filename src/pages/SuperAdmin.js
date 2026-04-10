@@ -1,7 +1,8 @@
 // src/pages/SuperAdmin.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import ListPagination, { slicePaged } from '../components/ListPagination';
 import { superAdminService } from '../services/api';
 import { format } from 'date-fns';
 
@@ -30,6 +31,8 @@ export default function SuperAdmin() {
   const [modalAdmin, setModalAdmin] = useState(null);
   const [formAdmin, setFormAdmin] = useState({ nome:'', email:'', senha:'' });
   const [salvando, setSalvando] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => { carregar(); }, []);
 
@@ -169,6 +172,11 @@ export default function SuperAdmin() {
 
   function handleLogout() { logout(); navigate('/login'); }
 
+  const { pageItems: tenantsPagina, total: totalTenantsList, safePage: tenantPageSafe } = useMemo(
+    () => slicePaged(tenants, page, pageSize),
+    [tenants, page, pageSize]
+  );
+
   return (
     <div style={{ minHeight:'100vh', background:'var(--cinza-100)' }}>
       {/* Topbar */}
@@ -223,7 +231,7 @@ export default function SuperAdmin() {
                 <th>Empresa</th><th>CNPJ</th><th>Admin</th><th>Plano</th><th>Status</th><th>Usuários</th><th>Registros</th><th>Desde</th><th>Ações</th>
               </tr></thead>
               <tbody>
-                {tenants.map(t => {
+                {tenantsPagina.map(t => {
                   const badge = STATUS_BADGE[t.status];
                   return (
                     <tr key={t.id}>
@@ -289,6 +297,20 @@ export default function SuperAdmin() {
                 })}
               </tbody>
             </table>
+          )}
+          {!carregando && totalTenantsList > 0 && (
+            <div style={{ padding: '12px 16px 16px', borderTop: '1px solid var(--cinza-100)' }}>
+              <ListPagination
+                page={tenantPageSafe}
+                pageSize={pageSize}
+                total={totalTenantsList}
+                onPageChange={setPage}
+                onPageSizeChange={(n) => {
+                  setPageSize(n);
+                  setPage(1);
+                }}
+              />
+            </div>
           )}
         </div>
       </div>

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Layout from '../components/dashboard/Layout';
+import ListPagination, { slicePaged } from '../components/ListPagination';
 import { escalaService, usuarioService } from '../services/api';
 
 const DIAS = [
@@ -19,6 +20,8 @@ export default function Escalas() {
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
+  const [escalasPage, setEscalasPage] = useState(1);
+  const [escalasPageSize, setEscalasPageSize] = useState(10);
   const [form, setForm] = useState({
     nome: 'Jornada padrão',
     horaInicio: '08:00',
@@ -35,6 +38,10 @@ export default function Escalas() {
       setUsuarios(data.filter((u) => u.role === 'COLABORADOR'));
     });
   }, []);
+
+  useEffect(() => {
+    setEscalasPage(1);
+  }, [usuarioId]);
 
   useEffect(() => {
     if (!usuarioId) {
@@ -101,6 +108,11 @@ export default function Escalas() {
   }
 
   const cols = usuarios.find((u) => u.id === usuarioId);
+
+  const { pageItems: escalasPagina, total: totalEscalas, safePage: escalasSafePage } = useMemo(
+    () => slicePaged(escalas, escalasPage, escalasPageSize),
+    [escalas, escalasPage, escalasPageSize]
+  );
 
   return (
     <Layout>
@@ -256,7 +268,7 @@ export default function Escalas() {
               <p style={{ color: 'var(--cinza-400)', fontSize: '14px' }}>Nenhuma escala cadastrada.</p>
             ) : (
               <div style={{ display: 'grid', gap: '10px' }}>
-                {escalas.map((e) => (
+                {escalasPagina.map((e) => (
                   <div
                     key={e.id}
                     style={{
@@ -305,6 +317,19 @@ export default function Escalas() {
                   </div>
                 ))}
               </div>
+            )}
+            {escalas.length > 0 && !carregando && (
+              <ListPagination
+                style={{ marginTop: '20px' }}
+                page={escalasSafePage}
+                pageSize={escalasPageSize}
+                total={totalEscalas}
+                onPageChange={setEscalasPage}
+                onPageSizeChange={(n) => {
+                  setEscalasPageSize(n);
+                  setEscalasPage(1);
+                }}
+              />
             )}
           </div>
         </>

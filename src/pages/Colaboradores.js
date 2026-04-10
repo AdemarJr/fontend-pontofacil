@@ -1,6 +1,7 @@
 // src/pages/Colaboradores.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Layout from '../components/dashboard/Layout';
+import ListPagination, { slicePaged } from '../components/ListPagination';
 import { usuarioService, localRegistroService } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -13,12 +14,18 @@ export default function Colaboradores() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const [busca, setBusca] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [pinsVisiveis, setPinsVisiveis] = useState(() => new Set());
   const [pinsGerados, setPinsGerados] = useState(() => ({})); // { [usuarioId]: pinGerado }
   const [pinsCarregando, setPinsCarregando] = useState(() => new Set());
   const [locais, setLocais] = useState([]);
 
   useEffect(() => { carregar(); }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [busca]);
   useEffect(() => {
     localRegistroService.listar().then(({ data }) => setLocais(data)).catch(() => setLocais([]));
   }, []);
@@ -129,19 +136,33 @@ export default function Colaboradores() {
     carregar();
   }
 
-  const filtrados = usuarios.filter(u =>
-    u.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    u.email.toLowerCase().includes(busca.toLowerCase()) ||
-    (u.cargo || '').toLowerCase().includes(busca.toLowerCase()) ||
-    (u.departamento || '').toLowerCase().includes(busca.toLowerCase())
+  const filtrados = useMemo(
+    () =>
+      usuarios.filter(
+        (u) =>
+          u.nome.toLowerCase().includes(busca.toLowerCase()) ||
+          u.email.toLowerCase().includes(busca.toLowerCase()) ||
+          (u.cargo || '').toLowerCase().includes(busca.toLowerCase()) ||
+          (u.departamento || '').toLowerCase().includes(busca.toLowerCase())
+      ),
+    [usuarios, busca]
   );
+
+  const { pageItems: filtradosPagina, total: totalFiltrados, safePage } = slicePaged(filtrados, page, pageSize);
 
   return (
     <Layout>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px' }}>
         <div>
           <h1 style={{ fontSize:'24px', fontWeight:'700' }}>Colaboradores</h1>
-          <p style={{ color:'var(--cinza-400)', fontSize:'14px', marginTop:'2px' }}>{usuarios.filter(u=>u.ativo).length} ativos</p>
+          <p style={{ color:'var(--cinza-400)', fontSize:'14px', marginTop:'2px' }}>
+            {usuarios.filter((u) => u.ativo).length} ativos
+            {totalFiltrados > 0 && (
+              <span style={{ marginLeft: '8px' }}>
+                · {totalFiltrados} {busca.trim() ? 'no filtro' : 'no total'}
+              </span>
+            )}
+          </p>
         </div>
         <button className="btn btn-primary" onClick={abrirCriar}>+ Novo Colaborador</button>
       </div>
@@ -161,7 +182,7 @@ export default function Colaboradores() {
               <th>Nome</th><th>E-mail</th><th>Cargo</th><th>Departamento</th><th>Função</th><th>PIN</th><th>Status</th><th>Ações</th>
             </tr></thead>
             <tbody>
-              {filtrados.map(u => (
+              {filtradosPagina.map((u) => (
                 <tr key={u.id}>
                   <td style={{ fontWeight:'500' }}>{u.nome}</td>
                   <td style={{ color:'var(--cinza-400)', fontSize:'13px' }}>{u.email}</td>
@@ -217,6 +238,20 @@ export default function Colaboradores() {
               ))}
             </tbody>
           </table>
+        )}
+        {!carregando && totalFiltrados > 0 && (
+          <div style={{ padding: '12px 16px 16px', borderTop: '1px solid var(--cinza-100)' }}>
+            <ListPagination
+              page={safePage}
+              pageSize={pageSize}
+              total={totalFiltrados}
+              onPageChange={setPage}
+              onPageSizeChange={(n) => {
+                setPageSize(n);
+                setPage(1);
+              }}
+            />
+          </div>
         )}
       </div>
 

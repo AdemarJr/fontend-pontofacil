@@ -1,6 +1,7 @@
 // src/pages/Relatorios.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Layout from '../components/dashboard/Layout';
+import ListPagination, { slicePaged } from '../components/ListPagination';
 import { relatorioService, usuarioService } from '../services/api';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -31,12 +32,21 @@ export default function Relatorios() {
   const [salvandoAjuste, setSalvandoAjuste] = useState(false);
   const [exportando, setExportando] = useState(false);
   const [bancoResumo, setBancoResumo] = useState(null);
+  const [bancoPage, setBancoPage] = useState(1);
+  const [bancoPageSize, setBancoPageSize] = useState(10);
+  const [espelhoPage, setEspelhoPage] = useState(1);
+  const [espelhoPageSize, setEspelhoPageSize] = useState(5);
 
   useEffect(() => {
     usuarioService.listar().then(({ data }) => setUsuarios(data));
   }, []);
 
   useEffect(() => { buscar(); }, [mes, ano, usuarioFiltro]);
+
+  useEffect(() => {
+    setBancoPage(1);
+    setEspelhoPage(1);
+  }, [mes, ano, usuarioFiltro]);
 
   useEffect(() => {
     relatorioService
@@ -73,6 +83,17 @@ export default function Relatorios() {
       buscar();
     } finally { setSalvandoAjuste(false); }
   }
+
+  const bancoRows = bancoResumo?.resumo || [];
+  const { pageItems: bancoPagina, total: totalBancoRows, safePage: bancoSafePage } = useMemo(
+    () => slicePaged(bancoRows, bancoPage, bancoPageSize),
+    [bancoRows, bancoPage, bancoPageSize]
+  );
+
+  const { pageItems: relatorioPagina, total: totalEspelho, safePage: espelhoSafePage } = useMemo(
+    () => slicePaged(relatorio, espelhoPage, espelhoPageSize),
+    [relatorio, espelhoPage, espelhoPageSize]
+  );
 
   async function exportarDoServidor(format) {
     setExportando(true);
@@ -175,7 +196,7 @@ export default function Relatorios() {
                 </tr>
               </thead>
               <tbody>
-                {bancoResumo.resumo.map((row, idx) => (
+                {bancoPagina.map((row, idx) => (
                   <tr key={`${row.usuario?.nome}-${idx}`}>
                     <td>{row.usuario?.nome}</td>
                     <td style={{ fontFamily: 'monospace' }}>{row.totalHoras}</td>
@@ -190,6 +211,19 @@ export default function Relatorios() {
               </tbody>
             </table>
           </div>
+          {!carregando && totalBancoRows > 0 && (
+            <ListPagination
+              style={{ marginTop: '12px' }}
+              page={bancoSafePage}
+              pageSize={bancoPageSize}
+              total={totalBancoRows}
+              onPageChange={setBancoPage}
+              onPageSizeChange={(n) => {
+                setBancoPageSize(n);
+                setBancoPage(1);
+              }}
+            />
+          )}
         </div>
       )}
 
@@ -201,7 +235,9 @@ export default function Relatorios() {
           <p style={{ fontSize:'32px' }}>📋</p>
           <p style={{ marginTop:'8px' }}>Nenhum registro no período</p>
         </div>
-      ) : relatorio.map(r => (
+      ) : (
+        <>
+          {relatorioPagina.map((r) => (
         <div key={r.usuario.nome} className="card" style={{ marginBottom:'16px' }}>
           {/* Header do colaborador */}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px', paddingBottom:'16px', borderBottom:'1px solid var(--cinza-200)' }}>
@@ -259,7 +295,22 @@ export default function Relatorios() {
             </div>
           ))}
         </div>
-      ))}
+          ))}
+          {!carregando && totalEspelho > 0 && (
+            <ListPagination
+              page={espelhoSafePage}
+              pageSize={espelhoPageSize}
+              total={totalEspelho}
+              onPageChange={setEspelhoPage}
+              pageSizeOptions={[5, 10, 20]}
+              onPageSizeChange={(n) => {
+                setEspelhoPageSize(n);
+                setEspelhoPage(1);
+              }}
+            />
+          )}
+        </>
+      )}
 
       {/* Modal de ajuste */}
       {ajusteModal && (
