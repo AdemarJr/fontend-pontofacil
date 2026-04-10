@@ -18,6 +18,14 @@ export default function RecuperarSenha() {
       const { data } = await authService.forgotPassword({ email: email.trim() });
       setOk(data.mensagem || 'Se o e-mail existir, você receberá instruções.');
     } catch (err) {
+      // Axios sem `response` normalmente significa falha de rede/CORS/DNS/API_URL inválida.
+      if (!err.response) {
+        setErro(
+          'Não foi possível conectar ao servidor. Verifique sua internet e se o backend está online e acessível (REACT_APP_API_URL).'
+        );
+        return;
+      }
+
       const d = err.response?.data;
       if (d?.code === 'TENANT_ID_OBRIGATORIO') {
         setErro(
