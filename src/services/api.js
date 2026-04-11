@@ -93,9 +93,9 @@ export const pontoService = {
 // ---- COMPROVANTES DE AUSÊNCIA (atestado / falta) ----
 export const comprovanteAusenciaService = {
   criar: (dados) => api.post('/comprovantes-ausencia', dados, { timeout: 120000 }),
-  minhas: () => api.get('/comprovantes-ausencia/minhas'),
-  listar: (params) => api.get('/comprovantes-ausencia', { params }),
-  obter: (id) => api.get(`/comprovantes-ausencia/${id}`),
+  minhas: () => api.get('/comprovantes-ausencia/minhas', { timeout: 60000 }),
+  listar: (params) => api.get('/comprovantes-ausencia', { params, timeout: 60000 }),
+  obter: (id) => api.get(`/comprovantes-ausencia/${id}`, { timeout: 60000 }),
   decidir: (id, dados) => api.put(`/comprovantes-ausencia/${id}/decidir`, dados),
 };
 

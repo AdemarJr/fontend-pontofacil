@@ -10,21 +10,46 @@ const STATUS_FILTRO = [
   { value: 'REJEITADO', label: 'Rejeitados' },
 ];
 
+async function abrirArquivoComprovante(id) {
+  try {
+    const { data } = await comprovanteAusenciaService.obter(id);
+    if (data.urlVisualizacao) {
+      window.open(data.urlVisualizacao, '_blank', 'noopener,noreferrer');
+    } else {
+      alert('Não foi possível gerar o link do arquivo. Verifique S3 ou tente novamente.');
+    }
+  } catch (e) {
+    const msg = e.response?.data?.error || e.message || 'Erro ao abrir';
+    alert(msg);
+  }
+}
+
 export default function AusenciasEmpresa() {
   const [filtro, setFiltro] = useState('PENDENTE');
   const [lista, setLista] = useState([]);
   const [carregando, setCarregando] = useState(true);
+  const [erroApi, setErroApi] = useState('');
   const [modal, setModal] = useState(null); // { item, acao: 'APROVADO' | 'REJEITADO' }
   const [obs, setObs] = useState('');
   const [salvando, setSalvando] = useState(false);
 
   async function carregar() {
     setCarregando(true);
+    setErroApi('');
     try {
       const { data } = await comprovanteAusenciaService.listar(filtro ? { status: filtro } : {});
-      setLista(data);
-    } catch {
+      setLista(Array.isArray(data) ? data : []);
+    } catch (e) {
       setLista([]);
+      const status = e.response?.status;
+      const msg = e.response?.data?.error || e.message || 'Falha ao carregar a lista';
+      if (status === 403) {
+        setErroApi(
+          `${msg} Se você usa conta Super Admin, entre como administrador da empresa para ver os comprovantes.`
+        );
+      } else {
+        setErroApi(msg);
+      }
     } finally {
       setCarregando(false);
     }
@@ -76,14 +101,32 @@ export default function AusenciasEmpresa() {
         </select>
       </div>
 
+      {erroApi && (
+        <div
+          style={{
+            background: 'var(--vermelho-claro)',
+            color: 'var(--vermelho)',
+            padding: '12px 16px',
+            borderRadius: 8,
+            fontSize: 14,
+            marginBottom: 16,
+            lineHeight: 1.45,
+          }}
+        >
+          {erroApi}
+        </div>
+      )}
+
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {carregando ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
             <div className="spinner" />
           </div>
-        ) : lista.length === 0 ? (
-          <p style={{ padding: 32, textAlign: 'center', color: 'var(--cinza-400)' }}>Nenhum registro neste filtro.</p>
-        ) : (
+        ) : lista.length === 0 && !erroApi ? (
+          <p style={{ padding: 32, textAlign: 'center', color: 'var(--cinza-400)' }}>
+            Nenhum registro neste filtro. Confira se a migração do banco foi aplicada e se o colaborador é da mesma empresa.
+          </p>
+        ) : lista.length === 0 ? null : (
           <table className="tabela">
             <thead>
               <tr>
@@ -109,33 +152,14 @@ export default function AusenciasEmpresa() {
                   <td>{badge(c.status)}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {c.urlVisualizacao ? (
-                        <a
-                          className="btn btn-secondary"
-                          style={{ fontSize: 12, padding: '6px 12px', textDecoration: 'none' }}
-                          href={c.urlVisualizacao}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Ver arquivo
-                        </a>
-                      ) : (
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{ fontSize: 12, padding: '6px 12px' }}
-                          onClick={async () => {
-                            try {
-                              const { data } = await comprovanteAusenciaService.obter(c.id);
-                              if (data.urlVisualizacao) window.open(data.urlVisualizacao, '_blank');
-                            } catch (e) {
-                              alert(e.response?.data?.error || 'Não foi possível abrir');
-                            }
-                          }}
-                        >
-                          Abrir arquivo
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ fontSize: 12, padding: '6px 12px' }}
+                        onClick={() => abrirArquivoComprovante(c.id)}
+                      >
+                        Ver arquivo
+                      </button>
                       {c.status === 'PENDENTE' && (
                         <>
                           <button
