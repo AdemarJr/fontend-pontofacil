@@ -508,9 +508,6 @@ export default function MeuPonto() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>
               <p style={{ color: 'white', fontSize: 14, fontWeight: 700, margin: 0 }}>🔔 Lembretes de ponto</p>
-              <p style={{ color: '#94a3b8', fontSize: 12, marginTop: 6, marginBottom: 0, lineHeight: 1.4 }}>
-                Lembra no horário do próximo passo: <strong>Entrada</strong>, <strong>intervalo</strong> (saída e retorno do almoço) e <strong>Saída</strong>. Se o próximo ponto mudar (ex.: ajuste no sistema), você também recebe um aviso — com permissão de notificação. No iOS o suporte varia.
-              </p>
               {permissaoNotificacao !== 'granted' && (
                 <p style={{ color: '#fbbf24', fontSize: 12, marginTop: 8, marginBottom: 0, lineHeight: 1.4 }}>
                   Permissão de notificação: {permissaoNotificacao === 'denied' ? 'bloqueada' : 'não concedida'}.
