@@ -471,6 +471,23 @@ export default function MeuPonto() {
       <p style={{ color: '#94a3b8', fontSize: 14, textAlign: 'center', maxWidth: 320, margin: 0 }}>
         {usuario.tenant?.nomeFantasia}
       </p>
+      <button
+        type="button"
+        onClick={() => navigate('/comprovantes')}
+        style={{
+          marginTop: 12,
+          background: 'rgba(255,255,255,0.1)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          color: '#e2e8f0',
+          padding: '10px 18px',
+          borderRadius: 10,
+          fontSize: 14,
+          cursor: 'pointer',
+          fontWeight: 500,
+        }}
+      >
+        📎 Atestado ou comprovante de ausência
+      </button>
 
       <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 28, textAlign: 'center', minWidth: 280 }}>
         <p style={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}>Próximo registro</p>

@@ -90,6 +90,15 @@ export const pontoService = {
   ultimoPonto: (usuarioId) => api.get(`/ponto/ultimo/${usuarioId}`),
 };
 
+// ---- COMPROVANTES DE AUSÊNCIA (atestado / falta) ----
+export const comprovanteAusenciaService = {
+  criar: (dados) => api.post('/comprovantes-ausencia', dados, { timeout: 120000 }),
+  minhas: () => api.get('/comprovantes-ausencia/minhas'),
+  listar: (params) => api.get('/comprovantes-ausencia', { params }),
+  obter: (id) => api.get(`/comprovantes-ausencia/${id}`),
+  decidir: (id, dados) => api.put(`/comprovantes-ausencia/${id}/decidir`, dados),
+};
+
 // ---- USUÁRIOS ----
 export const usuarioService = {
   listar: () => api.get('/usuarios'),

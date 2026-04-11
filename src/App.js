@@ -16,6 +16,8 @@ import Escalas from './pages/Escalas';
 import SuperAdmin from './pages/SuperAdmin';
 import Landing from './pages/Landing';
 import MeuPonto from './pages/MeuPonto';
+import ComprovantesColaborador from './pages/ComprovantesColaborador';
+import AusenciasEmpresa from './pages/AusenciasEmpresa';
 
 function RotaProtegida({ children, apenasAdmin = false, apenasColaborador = false }) {
   const { usuario, carregando, isAdmin } = useAuth();
@@ -64,6 +66,11 @@ export default function App() {
               <MeuPonto />
             </RotaProtegida>
           } />
+          <Route path="/comprovantes" element={
+            <RotaProtegida apenasColaborador>
+              <ComprovantesColaborador />
+            </RotaProtegida>
+          } />
           <Route path="/totem" element={
             <RotaProtegida>
               <Totem />
@@ -89,6 +96,11 @@ export default function App() {
           <Route path="/escalas" element={
             <RotaProtegida apenasAdmin>
               <Escalas />
+            </RotaProtegida>
+          } />
+          <Route path="/ausencias" element={
+            <RotaProtegida apenasAdmin>
+              <AusenciasEmpresa />
             </RotaProtegida>
           } />
           <Route path="/configuracoes" element={
