@@ -1,5 +1,5 @@
 // Administrador: fila de comprovantes de ausência (atestado / declaração)
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/dashboard/Layout';
 import { comprovanteAusenciaService } from '../services/api';
 
@@ -10,28 +10,32 @@ const STATUS_FILTRO = [
   { value: 'REJEITADO', label: 'Rejeitados' },
 ];
 
-async function abrirArquivoComprovante(id) {
-  try {
-    const { data } = await comprovanteAusenciaService.obter(id);
-    if (data.urlVisualizacao) {
-      window.open(data.urlVisualizacao, '_blank', 'noopener,noreferrer');
-    } else {
-      alert('Não foi possível gerar o link do arquivo. Verifique S3 ou tente novamente.');
-    }
-  } catch (e) {
-    const msg = e.response?.data?.error || e.message || 'Erro ao abrir';
-    alert(msg);
-  }
-}
-
 export default function AusenciasEmpresa() {
   const [filtro, setFiltro] = useState('PENDENTE');
   const [lista, setLista] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erroApi, setErroApi] = useState('');
-  const [modal, setModal] = useState(null); // { item, acao: 'APROVADO' | 'REJEITADO' }
+  const [decisaoModal, setDecisaoModal] = useState(null); // { item, acao: 'APROVADO' | 'REJEITADO' }
   const [obs, setObs] = useState('');
   const [salvando, setSalvando] = useState(false);
+
+  /** null | { loading: true } | { loading: false, url, isPdf } | { loading: false, error: string } */
+  const [previewArquivo, setPreviewArquivo] = useState(null);
+  const [zoomImg, setZoomImg] = useState(1);
+
+  const fecharPreview = useCallback(() => {
+    setPreviewArquivo(null);
+    setZoomImg(1);
+  }, []);
+
+  useEffect(() => {
+    if (!previewArquivo) return undefined;
+    function onKey(e) {
+      if (e.key === 'Escape') fecharPreview();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [previewArquivo, fecharPreview]);
 
   async function carregar() {
     setCarregando(true);
@@ -59,15 +63,33 @@ export default function AusenciasEmpresa() {
     carregar();
   }, [filtro]);
 
+  async function abrirPreviewComprovante(id) {
+    setZoomImg(1);
+    setPreviewArquivo({ loading: true });
+    try {
+      const { data } = await comprovanteAusenciaService.obter(id);
+      if (!data.urlVisualizacao) {
+        setPreviewArquivo({ loading: false, error: 'Não foi possível obter o arquivo. Verifique o armazenamento (S3) ou tente novamente.' });
+        return;
+      }
+      const isPdf =
+        data.tipoArquivo === 'pdf' ||
+        (typeof data.urlVisualizacao === 'string' && data.urlVisualizacao.startsWith('data:application/pdf'));
+      setPreviewArquivo({ loading: false, url: data.urlVisualizacao, isPdf });
+    } catch (e) {
+      setPreviewArquivo({ loading: false, error: e.response?.data?.error || e.message || 'Erro ao carregar' });
+    }
+  }
+
   async function confirmarDecisao() {
-    if (!modal) return;
+    if (!decisaoModal) return;
     setSalvando(true);
     try {
-      await comprovanteAusenciaService.decidir(modal.item.id, {
-        status: modal.acao,
+      await comprovanteAusenciaService.decidir(decisaoModal.item.id, {
+        status: decisaoModal.acao,
         observacaoAdmin: obs.trim() || undefined,
       });
-      setModal(null);
+      setDecisaoModal(null);
       setObs('');
       await carregar();
     } catch (e) {
@@ -156,7 +178,7 @@ export default function AusenciasEmpresa() {
                         type="button"
                         className="btn btn-secondary"
                         style={{ fontSize: 12, padding: '6px 12px' }}
-                        onClick={() => abrirArquivoComprovante(c.id)}
+                        onClick={() => abrirPreviewComprovante(c.id)}
                       >
                         Ver arquivo
                       </button>
@@ -168,7 +190,7 @@ export default function AusenciasEmpresa() {
                             style={{ fontSize: 12, padding: '6px 12px' }}
                             onClick={() => {
                               setObs('');
-                              setModal({ item: c, acao: 'APROVADO' });
+                              setDecisaoModal({ item: c, acao: 'APROVADO' });
                             }}
                           >
                             Aprovar
@@ -186,7 +208,7 @@ export default function AusenciasEmpresa() {
                             }}
                             onClick={() => {
                               setObs('');
-                              setModal({ item: c, acao: 'REJEITADO' });
+                              setDecisaoModal({ item: c, acao: 'REJEITADO' });
                             }}
                           >
                             Rejeitar
@@ -202,25 +224,178 @@ export default function AusenciasEmpresa() {
         )}
       </div>
 
-      {modal && (
+      {/* Modal visualização (imagem com zoom / PDF em iframe) */}
+      {previewArquivo && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Visualizar comprovante"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.88)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: 16,
+            boxSizing: 'border-box',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) fecharPreview();
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              width: '100%',
+              maxWidth: 960,
+              maxHeight: '95vh',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 0,
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                padding: '14px 16px',
+                borderBottom: '1px solid var(--cinza-100)',
+                flexShrink: 0,
+              }}
+            >
+              <span style={{ fontWeight: 600, fontSize: 15 }}>Visualizar comprovante</span>
+              <button type="button" className="btn btn-secondary" onClick={fecharPreview} style={{ padding: '8px 14px' }}>
+                Fechar
+              </button>
+            </div>
+
+            <div style={{ padding: 16, overflow: 'hidden', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              {previewArquivo.loading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
+                  <div className="spinner" />
+                </div>
+              ) : previewArquivo.error ? (
+                <p style={{ color: 'var(--vermelho)', textAlign: 'center', padding: 24 }}>{previewArquivo.error}</p>
+              ) : previewArquivo.isPdf ? (
+                <iframe
+                  title="Comprovante PDF"
+                  src={previewArquivo.url}
+                  style={{
+                    width: '100%',
+                    flex: 1,
+                    minHeight: 480,
+                    border: '1px solid var(--cinza-200)',
+                    borderRadius: 8,
+                    background: '#fff',
+                  }}
+                />
+              ) : (
+                <>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      flexWrap: 'wrap',
+                      marginBottom: 12,
+                    }}
+                  >
+                    <span style={{ fontSize: 13, color: 'var(--cinza-600)' }}>Zoom</span>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '6px 12px', minWidth: 40 }}
+                      onClick={() => setZoomImg((z) => Math.max(0.25, Math.round((z - 0.25) * 100) / 100))}
+                    >
+                      −
+                    </button>
+                    <span style={{ fontSize: 13, fontWeight: 600, minWidth: 48, textAlign: 'center' }}>{Math.round(zoomImg * 100)}%</span>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '6px 12px', minWidth: 40 }}
+                      onClick={() => setZoomImg((z) => Math.min(4, Math.round((z + 0.25) * 100) / 100))}
+                    >
+                      +
+                    </button>
+                    <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px' }} onClick={() => setZoomImg(1)}>
+                      Ajustar (100%)
+                    </button>
+                    <a
+                      href={previewArquivo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: 13, marginLeft: 'auto', color: 'var(--azul)' }}
+                    >
+                      Abrir em nova aba
+                    </a>
+                  </div>
+                  <div
+                    style={{
+                      overflow: 'auto',
+                      flex: 1,
+                      minHeight: 320,
+                      maxHeight: 'calc(95vh - 200px)',
+                      background: '#0f172a',
+                      borderRadius: 8,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <div
+                      style={{
+                        transform: `scale(${zoomImg})`,
+                        transformOrigin: 'top center',
+                        padding: zoomImg > 1 ? 24 : 0,
+                        transition: 'transform 0.12s ease-out',
+                      }}
+                    >
+                      <img
+                        src={previewArquivo.url}
+                        alt="Comprovante enviado pelo colaborador"
+                        style={{
+                          maxWidth: 'min(100%, 880px)',
+                          width: 'auto',
+                          height: 'auto',
+                          display: 'block',
+                          verticalAlign: 'top',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {decisaoModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div className="card" style={{ maxWidth: 420, width: '100%', padding: 28 }}>
             <h3 style={{ fontSize: 17, fontWeight: 600, marginBottom: 12 }}>
-              {modal.acao === 'APROVADO' ? 'Aprovar comprovante' : 'Rejeitar comprovante'}
+              {decisaoModal.acao === 'APROVADO' ? 'Aprovar comprovante' : 'Rejeitar comprovante'}
             </h3>
             <p style={{ fontSize: 14, color: 'var(--cinza-600)', marginBottom: 16 }}>
-              {modal.item.usuario?.nome} · {modal.item.dataReferencia}
+              {decisaoModal.item.usuario?.nome} · {decisaoModal.item.dataReferencia}
             </p>
             <label style={{ fontSize: 13, color: 'var(--cinza-600)' }}>Observação (opcional, visível ao colaborador)</label>
             <textarea className="input" rows={3} value={obs} onChange={(e) => setObs(e.target.value)} style={{ width: '100%', marginTop: 8, marginBottom: 20 }} placeholder="Ex.: deferido conforme documento médico" />
             <div style={{ display: 'flex', gap: 12 }}>
-              <button type="button" className="btn btn-secondary btn-full" onClick={() => setModal(null)} disabled={salvando}>
+              <button type="button" className="btn btn-secondary btn-full" onClick={() => setDecisaoModal(null)} disabled={salvando}>
                 Cancelar
               </button>
               <button
                 type="button"
                 className="btn btn-full"
-                style={modal.acao === 'REJEITADO' ? { background: 'var(--vermelho)', color: '#fff', border: 'none' } : {}}
+                style={decisaoModal.acao === 'REJEITADO' ? { background: 'var(--vermelho)', color: '#fff', border: 'none' } : {}}
                 onClick={confirmarDecisao}
                 disabled={salvando}
               >
