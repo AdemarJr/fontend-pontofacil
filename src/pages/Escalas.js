@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Layout from '../components/dashboard/Layout';
 import ListPagination, { slicePaged } from '../components/ListPagination';
 import { escalaService, usuarioService } from '../services/api';
+import { runEscalasTour } from '../tours/escalasTour';
 
 const DIAS = [
   { v: 1, l: 'Seg' },
@@ -37,6 +38,11 @@ export default function Escalas() {
     usuarioService.listar().then(({ data }) => {
       setUsuarios(data.filter((u) => u.role === 'COLABORADOR'));
     });
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => runEscalasTour({ force: false }), 700);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
@@ -116,15 +122,33 @@ export default function Escalas() {
 
   return (
     <Layout>
-      <div style={{ marginBottom: '28px' }}>
+      <div id="tour-escalas-header" style={{ marginBottom: '28px', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <div>
         <h1 style={{ fontSize: '24px', fontWeight: '700' }}>Jornadas e escalas</h1>
         <p style={{ color: 'var(--cinza-400)', fontSize: '14px', maxWidth: '560px' }}>
           Defina horário de entrada, intervalo e saída esperados. O espelho de ponto e o resumo de banco de
           horas usam a escala ativa nos dias da semana marcados.
         </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => runEscalasTour({ force: true })}
+          style={{
+            padding: '8px 14px',
+            fontSize: 13,
+            fontWeight: 600,
+            color: 'var(--verde-escuro)',
+            background: 'var(--verde-claro)',
+            border: '1px solid rgba(29,158,117,0.35)',
+            borderRadius: 8,
+            cursor: 'pointer',
+          }}
+        >
+          Como usar
+        </button>
       </div>
 
-      <div className="card" style={{ marginBottom: '20px' }}>
+      <div id="tour-escalas-colaborador" className="card" style={{ marginBottom: '20px' }}>
         <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '8px' }}>
           Colaborador
         </label>
@@ -143,9 +167,13 @@ export default function Escalas() {
         </select>
       </div>
 
+      <p id="tour-escalas-dica" style={{ fontSize: 13, color: 'var(--cinza-400)', maxWidth: 560, margin: '0 0 16px', lineHeight: 1.45 }}>
+        Selecione um colaborador acima para cadastrar horários, intervalo de almoço e dias da semana; as escalas aparecem na lista abaixo.
+      </p>
+
       {usuarioId && (
         <>
-          <div className="card" style={{ marginBottom: '20px' }}>
+          <div id="tour-escalas-form" className="card" style={{ marginBottom: '20px' }}>
             <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>Nova escala</h2>
             <form onSubmit={criarEscala} style={{ display: 'grid', gap: '14px', maxWidth: '560px' }}>
               <div>
@@ -156,7 +184,7 @@ export default function Escalas() {
                   onChange={(e) => setForm((p) => ({ ...p, nome: e.target.value }))}
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div id="tour-escalas-horarios" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '12px', color: 'var(--cinza-400)' }}>Entrada</label>
                   <input
@@ -176,7 +204,7 @@ export default function Escalas() {
                   />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div id="tour-escalas-almoco" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '12px', color: 'var(--cinza-400)' }}>Saída almoço (esperado)</label>
                   <input
@@ -196,7 +224,7 @@ export default function Escalas() {
                   />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div id="tour-escalas-carga" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '12px', color: 'var(--cinza-400)' }}>Carga horária líquida (h/dia)</label>
                   <input
@@ -221,7 +249,7 @@ export default function Escalas() {
                   />
                 </div>
               </div>
-              <div>
+              <div id="tour-escalas-dias">
                 <span style={{ fontSize: '12px', color: 'var(--cinza-400)', display: 'block', marginBottom: '8px' }}>
                   Dias da semana
                 </span>
@@ -250,13 +278,15 @@ export default function Escalas() {
               {erro && (
                 <div style={{ color: 'var(--vermelho)', fontSize: '13px' }}>{erro}</div>
               )}
+              <div id="tour-escalas-salvar">
               <button className="btn btn-primary" type="submit" disabled={salvando} style={{ maxWidth: '200px' }}>
                 {salvando ? 'Salvando…' : 'Adicionar escala'}
               </button>
+              </div>
             </form>
           </div>
 
-          <div className="card">
+          <div id="tour-escalas-lista" className="card">
             <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
               Escalas de {cols?.nome}
             </h2>

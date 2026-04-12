@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/dashboard/Layout';
 import { comprovanteAusenciaService } from '../services/api';
+import { runAusenciasTour } from '../tours/ausenciasTour';
 
 const STATUS_FILTRO = [
   { value: '', label: 'Todos' },
@@ -11,7 +12,7 @@ const STATUS_FILTRO = [
 ];
 
 export default function AusenciasEmpresa() {
-  const [filtro, setFiltro] = useState('PENDENTE');
+  const [filtro, setFiltro] = useState('');
   const [lista, setLista] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erroApi, setErroApi] = useState('');
@@ -63,6 +64,12 @@ export default function AusenciasEmpresa() {
     carregar();
   }, [filtro]);
 
+  useEffect(() => {
+    if (carregando) return;
+    const t = setTimeout(() => runAusenciasTour({ force: false }), 600);
+    return () => clearTimeout(t);
+  }, [carregando]);
+
   async function abrirPreviewComprovante(id) {
     setZoomImg(1);
     setPreviewArquivo({ loading: true });
@@ -107,20 +114,48 @@ export default function AusenciasEmpresa() {
 
   return (
     <Layout>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+      <div
+        id="tour-aus-header"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}
+      >
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700 }}>Ausências e comprovantes</h1>
           <p style={{ color: 'var(--cinza-400)', fontSize: 14, marginTop: 4 }}>
             Colaboradores enviam atestado ou documento; você aprova ou rejeita com observação opcional.
           </p>
         </div>
-        <select className="input" value={filtro} onChange={(e) => setFiltro(e.target.value)} style={{ minWidth: 160 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <select
+          id="tour-aus-filtro"
+          className="input"
+          value={filtro}
+          onChange={(e) => setFiltro(e.target.value)}
+          style={{ minWidth: 160 }}
+        >
           {STATUS_FILTRO.map((o) => (
             <option key={o.value || 'all'} value={o.value}>
               {o.label}
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={() => runAusenciasTour({ force: true })}
+          style={{
+            padding: '8px 14px',
+            fontSize: 13,
+            fontWeight: 600,
+            color: 'var(--verde-escuro)',
+            background: 'var(--verde-claro)',
+            border: '1px solid rgba(29,158,117,0.35)',
+            borderRadius: 8,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Como usar
+        </button>
+        </div>
       </div>
 
       {erroApi && (
@@ -139,7 +174,7 @@ export default function AusenciasEmpresa() {
         </div>
       )}
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div id="tour-aus-lista" className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {carregando ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
             <div className="spinner" />

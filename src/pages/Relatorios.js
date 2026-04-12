@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Layout from '../components/dashboard/Layout';
 import ListPagination, { slicePaged } from '../components/ListPagination';
 import { relatorioService, usuarioService } from '../services/api';
+import { runRelatoriosTour } from '../tours/relatoriosTour';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -42,6 +43,12 @@ export default function Relatorios() {
   }, []);
 
   useEffect(() => { buscar(); }, [mes, ano, usuarioFiltro]);
+
+  useEffect(() => {
+    if (carregando) return;
+    const t = setTimeout(() => runRelatoriosTour({ force: false }), 600);
+    return () => clearTimeout(t);
+  }, [carregando]);
 
   useEffect(() => {
     setBancoPage(1);
@@ -114,12 +121,28 @@ export default function Relatorios() {
   return (
     <Layout>
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px', flexWrap:'wrap', gap:'12px' }}>
+      <div id="tour-rel-header" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px', flexWrap:'wrap', gap:'12px' }}>
         <div>
           <h1 style={{ fontSize:'24px', fontWeight:'700' }}>Espelho de Ponto</h1>
           <p style={{ color:'var(--cinza-400)', fontSize:'14px' }}>Visualize e ajuste os registros</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => runRelatoriosTour({ force: true })}
+            style={{
+              padding: '8px 14px',
+              fontSize: 13,
+              fontWeight: 600,
+              color: 'var(--verde-escuro)',
+              background: 'var(--verde-claro)',
+              border: '1px solid rgba(29,158,117,0.35)',
+              borderRadius: 8,
+              cursor: 'pointer',
+            }}
+          >
+            Como usar
+          </button>
           <button
             type="button"
             className="btn btn-secondary"
@@ -151,7 +174,7 @@ export default function Relatorios() {
       </div>
 
       {/* Filtros */}
-      <div className="card" style={{ marginBottom:'20px' }}>
+      <div id="tour-rel-filtros" className="card" style={{ marginBottom:'20px' }}>
         <div style={{ display:'flex', gap:'16px', flexWrap:'wrap' }}>
           <div>
             <label style={{ display:'block', fontSize:'12px', fontWeight:'500', color:'var(--cinza-400)', marginBottom:'6px' }}>MÊS</label>
@@ -177,6 +200,7 @@ export default function Relatorios() {
         </div>
       </div>
 
+      <div id="tour-rel-conteudo">
       {bancoResumo?.resumo?.length > 0 && (
         <div className="card" style={{ marginBottom: '20px' }}>
           <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>Banco de horas e hora extra (mês)</h2>
@@ -311,6 +335,7 @@ export default function Relatorios() {
           )}
         </>
       )}
+      </div>
 
       {/* Modal de ajuste */}
       {ajusteModal && (

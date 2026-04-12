@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/dashboard/Layout';
 import ListPagination from '../components/ListPagination';
 import { relatorioService, pontoService } from '../services/api';
+import { runAdminDashboardTour } from '../tours/adminDashboardTour';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -50,6 +51,13 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [carregarDados]);
 
+  /** Tour guiado (primeira visita ao painel) */
+  useEffect(() => {
+    if (carregando) return;
+    const timer = setTimeout(() => runAdminDashboardTour({ force: false }), 700);
+    return () => clearTimeout(timer);
+  }, [carregando]);
+
   const TIPOS_COR = {
     ENTRADA: 'var(--verde)',
     SAIDA_ALMOCO: 'var(--amarelo)',
@@ -70,15 +78,33 @@ export default function Dashboard() {
   return (
     <Layout>
       {/* Header */}
-      <div style={{ marginBottom:'28px' }}>
-        <h1 style={{ fontSize:'24px', fontWeight:'700' }}>Painel de Controle</h1>
-        <p style={{ color:'var(--cinza-400)', marginTop:'4px' }}>
-          {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
-        </p>
+      <div id="tour-dashboard-header" style={{ marginBottom:'28px', display:'flex', flexWrap:'wrap', alignItems:'flex-start', justifyContent:'space-between', gap:'16px' }}>
+        <div>
+          <h1 style={{ fontSize:'24px', fontWeight:'700' }}>Painel de Controle</h1>
+          <p style={{ color:'var(--cinza-400)', marginTop:'4px' }}>
+            {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => runAdminDashboardTour({ force: true })}
+          style={{
+            padding:'8px 14px',
+            fontSize:'13px',
+            fontWeight:600,
+            color:'var(--verde-escuro)',
+            background:'var(--verde-claro)',
+            border:'1px solid rgba(29,158,117,0.35)',
+            borderRadius:'8px',
+            cursor:'pointer',
+          }}
+        >
+          Como usar o painel
+        </button>
       </div>
 
       {/* Métricas */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:'16px', marginBottom:'28px' }}>
+      <div id="tour-dashboard-metrics" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:'16px', marginBottom:'28px' }}>
         <CardMetrica label="Total de Colaboradores" valor={resumo?.totalColaboradores ?? '-'} cor="var(--azul)" emoji="👥" />
         <CardMetrica label="Presentes Agora" valor={resumo?.presentes ?? '-'} cor="var(--verde)" emoji="✅" />
         <CardMetrica label="Ausentes" valor={resumo?.ausentes ?? '-'} cor="var(--vermelho)" emoji="❌" />
@@ -86,7 +112,7 @@ export default function Dashboard() {
       </div>
 
       {/* Últimos registros */}
-      <div className="card">
+      <div id="tour-dashboard-registros" className="card">
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
           <h2 style={{ fontSize:'16px', fontWeight:'600' }}>Registros de Hoje</h2>
           <button onClick={carregarDados} style={{ background:'none', border:'none', color:'var(--verde)', cursor:'pointer', fontSize:'13px', fontWeight:'500' }}>

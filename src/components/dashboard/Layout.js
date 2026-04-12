@@ -24,7 +24,7 @@ export default function Layout({ children }) {
   return (
     <div style={{ display:'flex', minHeight:'100vh' }}>
       {/* Sidebar */}
-      <aside style={{ width:'240px', background:'var(--cinza-900)', display:'flex', flexDirection:'column', flexShrink:0, position:'fixed', height:'100vh', zIndex:100 }}>
+      <aside id="tour-sidebar" style={{ width:'240px', background:'var(--cinza-900)', display:'flex', flexDirection:'column', flexShrink:0, position:'fixed', height:'100vh', zIndex:100 }}>
         {/* Logo */}
         <div
           style={{

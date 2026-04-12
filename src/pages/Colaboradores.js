@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Layout from '../components/dashboard/Layout';
 import ListPagination, { slicePaged } from '../components/ListPagination';
 import { usuarioService, localRegistroService } from '../services/api';
+import { runColaboradoresTour } from '../tours/colaboradoresTour';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Colaboradores() {
@@ -25,6 +26,12 @@ export default function Colaboradores() {
   const [excluindo, setExcluindo] = useState(false);
 
   useEffect(() => { carregar(); }, []);
+
+  useEffect(() => {
+    if (carregando) return;
+    const t = setTimeout(() => runColaboradoresTour({ force: false }), 600);
+    return () => clearTimeout(t);
+  }, [carregando]);
 
   useEffect(() => {
     setPage(1);
@@ -185,8 +192,8 @@ export default function Colaboradores() {
 
   return (
     <Layout>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px' }}>
-        <div>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px', flexWrap:'wrap', gap:12 }}>
+        <div id="tour-colab-header">
           <h1 style={{ fontSize:'24px', fontWeight:'700' }}>Colaboradores</h1>
           <p style={{ color:'var(--cinza-400)', fontSize:'14px', marginTop:'2px' }}>
             {usuarios.filter((u) => u.ativo).length} ativos
@@ -197,22 +204,25 @@ export default function Colaboradores() {
             )}
           </p>
         </div>
-        <button className="btn btn-primary" onClick={abrirCriar}>+ Novo Colaborador</button>
+        <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignItems:'center' }}>
+        <button type="button" onClick={() => runColaboradoresTour({ force: true })} style={{ padding:'8px 14px', fontSize:13, fontWeight:600, color:'var(--verde-escuro)', background:'var(--verde-claro)', border:'1px solid rgba(29,158,117,0.35)', borderRadius:8, cursor:'pointer' }}>Como usar</button>
+        <button id="tour-colab-btn-novo" type="button" className="btn btn-primary" onClick={abrirCriar}>+ Novo Colaborador</button>
+        </div>
       </div>
 
       {/* Busca */}
-      <div style={{ marginBottom:'20px' }}>
+      <div id="tour-colab-busca" style={{ marginBottom:'20px' }}>
         <input className="input" placeholder="🔍 Buscar por nome, e-mail ou cargo..." value={busca} onChange={e => setBusca(e.target.value)} style={{ maxWidth:'400px' }} />
       </div>
 
       {/* Tabela */}
-      <div className="card" style={{ padding:0, overflow:'hidden' }}>
+      <div id="tour-colab-tabela" className="card" style={{ padding:0, overflow:'hidden' }}>
         {carregando ? (
           <div style={{ display:'flex', justifyContent:'center', padding:'60px' }}><div className="spinner" /></div>
         ) : (
           <table className="tabela">
             <thead><tr>
-              <th>Nome</th><th>E-mail</th><th>Cargo</th><th>Departamento</th><th>Função</th><th>PIN</th><th>Status</th><th>Ações</th>
+              <th>Nome</th><th>E-mail</th><th>Cargo</th><th>Departamento</th><th>Função</th><th id="tour-colab-th-pin">PIN</th><th>Status</th><th id="tour-colab-th-acoes">Ações</th>
             </tr></thead>
             <tbody>
               {filtradosPagina.map((u) => (

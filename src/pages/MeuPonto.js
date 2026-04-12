@@ -4,6 +4,7 @@ import Webcam from 'react-webcam';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { pontoService, tenantService } from '../services/api';
+import { runMeuPontoTour } from '../tours/meuPontoTour';
 import { publicUrl, logoInternoUrl } from '../utils/branding';
 
 const TIPOS_LABEL = {
@@ -238,6 +239,13 @@ export default function MeuPonto() {
   useEffect(() => {
     if (usuario?.id) carregarProximo();
   }, [usuario?.id, carregarProximo]);
+
+  /** Tour guiado na tela principal do Meu ponto (primeira visita) */
+  useEffect(() => {
+    if (etapa !== 'confirmar') return;
+    const t = setTimeout(() => runMeuPontoTour({ force: false }), 900);
+    return () => clearTimeout(t);
+  }, [etapa]);
 
   useEffect(() => {
     if (!usuario?.id || usuario.role !== 'COLABORADOR') return;
@@ -481,6 +489,7 @@ export default function MeuPonto() {
       }}
     >
       <header
+        id="tour-meu-header"
         style={{
           width: '100%',
           padding: '18px 56px 18px 20px',
@@ -534,7 +543,25 @@ export default function MeuPonto() {
           boxSizing: 'border-box',
         }}
       >
-      <h1 style={{ color: 'white', fontSize: 22, fontWeight: 700, margin: 0 }}>Meu ponto</h1>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, width: '100%' }}>
+        <h1 style={{ color: 'white', fontSize: 22, fontWeight: 700, margin: 0 }}>Meu ponto</h1>
+        <button
+          type="button"
+          onClick={() => runMeuPontoTour({ force: true })}
+          style={{
+            padding: '6px 12px',
+            fontSize: 12,
+            fontWeight: 600,
+            color: '#e2e8f0',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: 8,
+            cursor: 'pointer',
+          }}
+        >
+          Como usar o Meu ponto
+        </button>
+      </div>
       <p style={{ color: '#94a3b8', fontSize: 14, textAlign: 'center', maxWidth: 320, margin: 0 }}>
         {usuario.tenant?.nomeFantasia}
       </p>
@@ -571,7 +598,7 @@ export default function MeuPonto() {
         📎 Atestado ou comprovante de ausência
       </button>
 
-      <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 28, textAlign: 'center', minWidth: 280 }}>
+      <div id="tour-meu-proximo" style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 28, textAlign: 'center', minWidth: 280 }}>
         <p style={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}>Próximo registro</p>
         <p style={{ color: 'white', fontSize: 26, fontWeight: 700 }}>
           {tipoInfo?.emoji} {tipoInfo?.label}
@@ -581,7 +608,7 @@ export default function MeuPonto() {
         </p>
       </div>
 
-      <div style={{ width: '100%', maxWidth: 420 }}>
+      <div id="tour-meu-lembretes" style={{ width: '100%', maxWidth: 420 }}>
         <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 14, padding: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>
@@ -608,7 +635,7 @@ export default function MeuPonto() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 340 }}>
+      <div id="tour-meu-acao" style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 340 }}>
         {fotoObrigatoria ? (
           <button type="button" className="btn btn-primary btn-full btn-lg" onClick={() => setEtapa('camera')}>
             Abrir câmera →

@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Layout from '../components/dashboard/Layout';
 import ListPagination, { slicePaged } from '../components/ListPagination';
 import { tenantService, localRegistroService } from '../services/api';
+import { runConfiguracoesTour } from '../tours/configuracoesTour';
 
 export default function Configuracoes() {
   const [config, setConfig] = useState(null);
@@ -35,6 +36,12 @@ export default function Configuracoes() {
 
   useEffect(() => {
     if (config) carregarLocais();
+  }, [config]);
+
+  useEffect(() => {
+    if (!config) return;
+    const t = setTimeout(() => runConfiguracoesTour({ force: false }), 600);
+    return () => clearTimeout(t);
   }, [config]);
 
   async function salvar() {
@@ -82,14 +89,32 @@ export default function Configuracoes() {
 
   return (
     <Layout>
-      <div style={{ marginBottom:'28px' }}>
+      <div id="tour-cfg-header" style={{ marginBottom:'28px', display:'flex', flexWrap:'wrap', alignItems:'flex-start', justifyContent:'space-between', gap:16 }}>
+        <div>
         <h1 style={{ fontSize:'24px', fontWeight:'700' }}>Configurações</h1>
         <p style={{ color:'var(--cinza-400)', fontSize:'14px' }}>{config.nomeFantasia} · {config.cnpj}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => runConfiguracoesTour({ force: true })}
+          style={{
+            padding:'8px 14px',
+            fontSize:'13px',
+            fontWeight:600,
+            color:'var(--verde-escuro)',
+            background:'var(--verde-claro)',
+            border:'1px solid rgba(29,158,117,0.35)',
+            borderRadius:'8px',
+            cursor:'pointer',
+          }}
+        >
+          Como usar
+        </button>
       </div>
 
       <div style={{ display:'grid', gap:'20px', maxWidth:'640px' }}>
         {/* ID do Totem */}
-        <div className="card">
+        <div id="tour-cfg-totem" className="card">
           <h2 style={{ fontSize:'15px', fontWeight:'600', marginBottom:'16px' }}>🖥 ID do Totem</h2>
           <p style={{ fontSize:'13px', color:'var(--cinza-400)', marginBottom:'10px' }}>Cole este ID na configuração do tablet/celular fixo</p>
           <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
@@ -99,7 +124,7 @@ export default function Configuracoes() {
         </div>
 
         {/* Geofencing */}
-        <div className="card">
+        <div id="tour-cfg-geofence" className="card">
           <h2 style={{ fontSize:'15px', fontWeight:'600', marginBottom:'16px' }}>📍 Geofencing</h2>
 
           <label style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px', cursor:'pointer' }}>
@@ -130,7 +155,7 @@ export default function Configuracoes() {
         </div>
 
         {/* Locais nomeados (múltiplas cercas) */}
-        <div className="card">
+        <div id="tour-cfg-locais" className="card">
           <h2 style={{ fontSize:'15px', fontWeight:'600', marginBottom:'8px' }}>📌 Locais permitidos para o totem</h2>
           <p style={{ fontSize:'13px', color:'var(--cinza-400)', marginBottom:'16px' }}>
             Cadastre filiais, obras ou entradas com nome, GPS e raio. Com cerca virtual ativa, basta existir um local cadastrado
@@ -224,7 +249,7 @@ export default function Configuracoes() {
         </div>
 
         {/* Registro */}
-        <div className="card">
+        <div id="tour-cfg-registro" className="card">
           <h2 style={{ fontSize:'15px', fontWeight:'600', marginBottom:'16px' }}>📸 Registro de Ponto</h2>
 
           <label style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px', cursor:'pointer' }}>
@@ -244,7 +269,7 @@ export default function Configuracoes() {
           </div>
         )}
 
-        <button className="btn btn-primary btn-lg" onClick={salvar} disabled={salvando}>
+        <button id="tour-cfg-salvar" className="btn btn-primary btn-lg" onClick={salvar} disabled={salvando}>
           {salvando ? 'Salvando...' : 'Salvar Configurações'}
         </button>
       </div>

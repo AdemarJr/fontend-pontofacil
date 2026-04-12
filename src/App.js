@@ -2,6 +2,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import './styles/global.css';
+import './styles/tour-overrides.css';
 
 // Páginas
 import Login from './pages/Login';
