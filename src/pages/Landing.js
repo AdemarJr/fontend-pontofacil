@@ -9,6 +9,9 @@ const WA_TEXT = encodeURIComponent(
 );
 const WA_HREF = `https://wa.me/${WA_NUMBER}?text=${WA_TEXT}`;
 
+/** Logo horizontal (fundo escuro) — `public/logo-landing.png` */
+const LOGO_LANDING = '/logo-landing.png';
+
 /** Ordem e tamanhos otimizados para o grid Bento (desktop). */
 const FEATURES = [
   {
@@ -72,11 +75,11 @@ export default function Landing() {
         <div className="landing-header-inner">
           <Link to="/" className="landing-logo" aria-label="Ponto Fácil — início">
             <img
-              src={publicUrl('/logo-horizontal.png')}
+              src={publicUrl(LOGO_LANDING)}
               alt="Ponto Fácil"
               className="landing-logo-img"
               width={360}
-              height={72}
+              height={80}
             />
           </Link>
           <nav className="landing-nav" aria-label="Seções">
@@ -189,22 +192,16 @@ export default function Landing() {
               </figure>
               <figure className="landing-showcase-figure landing-showcase-figure--tablet">
                 <figcaption className="landing-showcase-caption">Totem · PIN</figcaption>
-                <div
-                  className="landing-showcase-frame landing-showcase-frame--tablet"
-                  role="img"
-                  aria-label="Ilustração de tablet com teclado numérico para registro por PIN"
-                >
-                  <div className="landing-tablet-bezel" />
-                  <div className="landing-tablet-screen">
-                    <div className="landing-tablet-notch" />
-                    <p className="landing-tablet-brand">Ponto Fácil</p>
-                    <div className="landing-tablet-pin-grid" aria-hidden>
-                      {Array.from({ length: 9 }, (_, i) => (
-                        <span key={i} className="landing-tablet-pin-key" />
-                      ))}
-                    </div>
-                    <p className="landing-tablet-hint">Toque no PIN e confirme</p>
-                  </div>
+                <div className="landing-showcase-frame landing-showcase-frame--tablet">
+                  <img
+                    src={publicUrl('/landing-totem-pin.png')}
+                    alt="Totem com teclado numérico para digitar PIN e registrar ponto"
+                    className="landing-showcase-img"
+                    width={390}
+                    height={844}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </div>
               </figure>
             </div>
@@ -383,11 +380,11 @@ export default function Landing() {
       <footer className="landing-footer">
         <div className="landing-footer-brand">
           <img
-            src={publicUrl('/logo-stacked.png')}
+            src={publicUrl(LOGO_LANDING)}
             alt="Ponto Fácil"
             className="landing-footer-logo"
-            width={140}
-            height={120}
+            width={320}
+            height={72}
             decoding="async"
           />
         </div>
